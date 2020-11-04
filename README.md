@@ -1,4 +1,7 @@
 # bayesmove_method_comparison
+[![DOI](https://zenodo.org/badge/289030089.svg)](https://zenodo.org/badge/latestdoi/289030089)
+
+
 R code associated with Cullen et al. Methods in Ecology and Evolution paper *Identifying latent behavioral states in animal movement with non-parametric Bayesian methods*.
 
 This repository stores the R scripts used to generate the simulated data, analyze the data with each of the three methods that were compared (BCPA, HMM, non-parametric Bayesian), and generate figures. However, snail kite movement data are not included since this is a federally protected species under the Endangered Species Act and therefore these data are sensitive.
