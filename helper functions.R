@@ -271,6 +271,94 @@ extract.behav.props_weird=function(params, lims, behav.names){
   props
 }
 
+
+#--------------------------------------
+
+extract.behav.props_segclust=function(params, lims, behav.names){  
+  #only for segclust2d results that use a normal distribution
+  #only defined for step lengths ('dist') and turning angles ('rel.angle')
+  #params must be a list of data frames storing 4 cols for the params of the normal distributions (mu.SL, mu.TA, sd.SL, sd.TA)
+  #lims must be a list of numeric vectors
+  
+  #number of bins for both params are already defined as 5 (SL) and 8 (TA)
+  #order of states is set as encamped, ARS, transit
+  
+  #Extract bin proportions for step lengths
+  props.SL<- list() #create list to store results per behavior
+  
+  # SL<- params[[1]]  #extract SL params from argument; must be first
+  dist.bin.lims<- lims[[1]]  #extract limits for SL from argument; must be first
+  
+  for (j in 1:nrow(params)) {
+    mu1=params[j,1]
+    sd1=params[j,3]
+    
+    bins.estim=rep(NA,(length(dist.bin.lims) - 1))
+    
+    for (i in 2:length(dist.bin.lims)) {
+      if (i-1 == 1) {
+        bins.estim[i-1]=pnorm(dist.bin.lims[i], mean=mu1, sd=sd1)
+      } else {
+        bins.estim[i-1]=pnorm(dist.bin.lims[i], mean=mu1,sd=sd1)-
+          pnorm(dist.bin.lims[i-1], mean=mu1, sd=sd1)
+      }
+    }
+    
+    props.SL[[j]]<- bins.estim
+  }
+  
+  names(props.SL)<- behav.names
+  props.SL1<- props.SL %>% 
+    bind_rows() %>% 
+    pivot_longer(cols = names(.), names_to = "behav", values_to = "prop") %>% 
+    arrange(behav) %>% 
+    mutate(var = "Step Length", bin = rep(1:5, length(behav.names)))
+  
+  
+  
+  #Extract bin proportions for turning angles and create as bilaterally symmetrical
+  props.TA<- list()  #create list to store results per behavior
+  
+  angle.bin.lims<- lims[[2]]  #extract limits for TA from argument; must be second
+  angle.bin.lims2<- angle.bin.lims[angle.bin.lims >= 0]  #only positive values
+  
+  for (j in 1:nrow(params)) {
+    mu1=params[j,2]
+    sd1=params[j,4]
+    
+    bins.estim=rep(NA,(length(angle.bin.lims2) - 1))
+    
+    for (i in 2:length(angle.bin.lims2)) {
+      if (i-1 == 1) {
+        bins.estim[i-1]=pnorm(angle.bin.lims2[i], mean=mu1, sd=sd1)
+      } else {
+        bins.estim[i-1]=pnorm(angle.bin.lims2[i], mean=mu1,sd=sd1)-
+          pnorm(angle.bin.lims2[i-1], mean=mu1, sd=sd1)
+      }
+    }
+    
+    props.TA[[j]]<- c(rev(bins.estim), bins.estim)  #create symmetrical distribution
+  }
+  
+  names(props.TA)<- behav.names
+  props.TA1<- props.TA %>% 
+    bind_rows() %>% 
+    pivot_longer(cols = names(.), names_to = "behav", values_to = "prop") %>% 
+    arrange(behav) %>% 
+    mutate(var = "Turning Angle", bin = rep(1:8, length(behav.names)))
+  
+  
+  
+  #Combine proportions for SL and TA
+  props<- rbind(props.SL1, props.TA1)
+  props$behav<- factor(props$behav, levels = behav.names)
+  props<- props %>% 
+    arrange(behav, var)
+  
+  props
+}
+
+
 #--------------------------------------
 
 rtnorm=function(n,lo,hi,mu,sig, log = FALSE){   #generates truncated normal variates based on cumulative normal distribution
@@ -307,6 +395,21 @@ assign.time.seg_hmm=function(dat, brkpts){  #add tseg assignment to each obs
   tmp=which(unique(dat$id) == brkpts$id)
   breakpt<- brkpts[tmp,-1] %>% purrr::discard(is.na) %>% as.numeric(.[1,])
   breakpt<- breakpt + 1  #only for analysis of HMMs with simulated data
+  breakpt1=c(0,breakpt,Inf)
+  n=length(breakpt1)
+  res=matrix(NA,nrow(dat),1)  #accounts for NA state at beginning of each ID
+  for (i in 2:n){
+    ind=which(breakpt1[i-1] < dat$time1 & dat$time1 <= breakpt1[i])
+    res[ind,]=i-1
+  }
+  dat$tseg<- as.vector(res)
+  dat
+}
+
+
+#--------------------------------------
+assign.time.seg_segclust = function(dat){  #add tseg assignment to each obs
+  breakpt<- which(diff(dat$state, lag = 1) != 0)
   breakpt1=c(0,breakpt,Inf)
   n=length(breakpt1)
   res=matrix(NA,nrow(dat),1)  #accounts for NA state at beginning of each ID
