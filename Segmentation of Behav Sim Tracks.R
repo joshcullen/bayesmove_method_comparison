@@ -113,28 +113,21 @@ ngibbs = 40000
 plan(multisession, workers = 5)
 
 # track_length == 1000; takes 3.5 min for 40000 iterations
-with_progress({  #this function is needed to print a progress bar for parallel computations when using {bayesmove} v0.2.0; this is currently only available on GitHub
-  dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
-})
 
 # track_length == 5000; takes 14 min for 40000 iterations
-with_progress({
-  dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
-})
 
 # track_length == 10000; takes 25 min for 40000 iterations
-with_progress({
-  dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
-})
 
 # track_length == 50000; takes 138 min for 40000 iterations
-with_progress({
-  dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
-})
+
 
 plan(sequential)  #closes background workers
 
@@ -313,28 +306,20 @@ ngibbs = 40000
 plan(multisession, workers = 5)
 
 # track_length == 1000; takes 4 min for 40000 iterations
-with_progress({  #this function is needed to print a progress bar for parallel computations when using {bayesmove} v0.2.0; this is currently only available on GitHub
-  dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
-})
 
 # track_length == 5000; takes 15 min for 40000 iterations
-with_progress({
-  dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
-})
 
 # track_length == 10000; takes 27 min for 40000 iterations
-with_progress({
-  dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
-})
 
 # track_length == 50000; takes 156 min for 40000 iterations
-with_progress({
-  dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
+dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
-})
 
 plan(sequential)  #closes background workers
 
