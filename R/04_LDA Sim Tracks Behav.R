@@ -16,7 +16,7 @@ library(circular)
 library(gridExtra)
 
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 ######################################################
@@ -24,7 +24,7 @@ source('helper functions.R')
 ######################################################
 
 #get data
-dat<- read.csv("CRW_MM_tsegs_weird.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_tsegs_weird.csv", as.is = T)
 dat.list<- df_to_list(dat = dat, ind = "id")  #for later behavioral assignment
 nbins<- c(5,8)  #number of bins per param (in order)
 dat_red<- dat %>% 
@@ -74,10 +74,10 @@ names(theta.estim)<- names(dat.list)
 theta.estim_export<- theta.estim %>%
   map(., as.data.frame) %>%
   bind_rows(., .id = 'id')
-# write.csv(theta.estim_export, "theta_estim_weird.csv", row.names = F)
+# write.csv(theta.estim_export, "data/theta_estim_weird.csv", row.names = F)
 
 #read-in data
-# theta.estim<- read.csv("theta_estim_weird.csv", as.is=T)
+# theta.estim<- read.csv("data/theta_estim_weird.csv", as.is=T)
 # theta.estim<- theta.estim %>% group_split(., id, keep=F)
 
 
@@ -104,7 +104,7 @@ names(behav.res)<- names(dat.list)
 behav.res_exp<- bind_rows(behav.res, .id = "id")
 
 #export behav.res values
-# write.csv(behav.res_exp, "CRW MM LDA Phi values_weird.csv", row.names = F)
+# write.csv(behav.res_exp, "data/CRW MM LDA Phi values_weird.csv", row.names = F)
 
 
 #Plot histograms of proportion data; order color scale from slow to fast
@@ -141,7 +141,7 @@ behav.order_exp<- bind_rows(behav.order) %>%
   t() %>% 
   data.frame() %>% 
   mutate(id = names(behav.order))
-# write.csv(behav.order_exp, "CRW MM LDA behavior order_weird.csv", row.names = F)
+# write.csv(behav.order_exp, "data/CRW MM LDA behavior order_weird.csv", row.names = F)
 
 #Create augmented matrix by replicating rows (tsegs) according to obs per tseg
 theta.estim.long<- list()
@@ -287,8 +287,8 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 
 
 #export results
-# write.csv(dat2, "Modeled MM Sim Tracks w Behav_weird.csv", row.names = F)
-# write.csv(time, "LDA_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(dat2, "data/Modeled MM Sim Tracks w Behav_weird.csv", row.names = F)
+# write.csv(time, "data/LDA_elapsed_time_weird.csv", row.names = F)  #units = min
 
 
 
@@ -300,8 +300,8 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 ##################
 
 # Load breakpoints
-bayes.brkpts<- read.csv("Bayesian_allbreakpts_weird.csv")
-true.brkpts_weird<- read.csv("CRW_MM_sim_brkpts_weird.csv")
+bayes.brkpts<- read.csv("data/Bayesian_allbreakpts_weird.csv")
+true.brkpts_weird<- read.csv("data/CRW_MM_sim_brkpts_weird.csv")
 
 
 ## Part a: segmentation heatmap
@@ -529,7 +529,7 @@ grid.arrange(p.seg, p.hist, p.prop, heights = c(0.2, 1, 0.1, 1),
 set.seed(123)
 
 #get data
-dat<- read.csv("CRW_MM_tsegs_parametric.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_tsegs_parametric.csv", as.is = T)
 dat.list<- df_to_list(dat = dat, ind = "id")  #for later behavioral assignment
 nbins<- c(5,8)  #number of bins per param (in order)
 dat_red<- dat %>% 
@@ -579,10 +579,10 @@ names(theta.estim)<- names(dat.list)
 theta.estim_export<- theta.estim %>%
   map(., as.data.frame) %>%
   bind_rows(., .id = 'id')
-# write.csv(theta.estim_export, "theta_estim_parametric.csv", row.names = F)
+# write.csv(theta.estim_export, "data/theta_estim_parametric.csv", row.names = F)
 
 #read-in data
-# theta.estim<- read.csv("theta_estim_parametric.csv", as.is=T)
+# theta.estim<- read.csv("data/theta_estim_parametric.csv", as.is=T)
 # theta.estim<- theta.estim %>% group_split(., id, keep=F)
 
 
@@ -609,7 +609,7 @@ names(behav.res)<- names(dat.list)
 behav.res_exp<- bind_rows(behav.res, .id = "id")
 
 #export behav.res values
-# write.csv(behav.res_exp, "CRW MM LDA Phi values_parametric.csv", row.names = F)
+# write.csv(behav.res_exp, "data/CRW MM LDA Phi values_parametric.csv", row.names = F)
 
 
 #Plot histograms of proportion data; order color scale from slow to fast
@@ -646,7 +646,7 @@ behav.order_exp<- bind_rows(behav.order) %>%
   t() %>% 
   data.frame() %>% 
   mutate(id = names(behav.order))
-# write.csv(behav.order_exp, "CRW MM LDA behavior order_parametric.csv", row.names = F)
+# write.csv(behav.order_exp, "data/CRW MM LDA behavior order_parametric.csv", row.names = F)
 
 #Create augmented matrix by replicating rows (tsegs) according to obs per tseg
 theta.estim.long<- list()
@@ -792,5 +792,5 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 
 
 #export results
-# write.csv(dat2, "Modeled MM Sim Tracks w Behav_parametric.csv", row.names = F)
-# write.csv(time, "LDA_elapsed_time_parametric.csv", row.names = F)  #units = min
+# write.csv(dat2, "data/Modeled MM Sim Tracks w Behav_parametric.csv", row.names = F)
+# write.csv(time, "data/LDA_elapsed_time_parametric.csv", row.names = F)  #units = min

@@ -1,14 +1,12 @@
-#####################################
-#####################################
-#### Mixed-Membership Simulation ####
-#####################################
-#####################################
+#############################################
+#### Simulations w/ Common Distributions ####
+#############################################
 
 library(tidyverse)
 library(circular)
 library(tictoc)
 
-source('Simulation Functions.R')
+source('R/Simulation Functions.R')
 
 ### Simulate full track w/ different numbers of time segments ###
 ## Create tracks w/ 10, 50, 100, and 500 segments while keeping 100 obs per tseg
@@ -142,8 +140,8 @@ ggplot(tracks[tracks$track_length == 1000,], aes(TA, color=behav_coarse)) +
 
 
 
-# write.csv(tracks, "CRW_MM_sim_parametric.csv", row.names = F)
-# write.csv(brkpts, "CRW_MM_sim_brkpts_parametric.csv", row.names = F)
+# write.csv(tracks, "data/CRW_MM_sim_parametric.csv", row.names = F)
+# write.csv(brkpts, "data/CRW_MM_sim_brkpts_parametric.csv", row.names = F)
 
 
 

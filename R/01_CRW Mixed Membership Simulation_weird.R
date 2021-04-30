@@ -6,8 +6,8 @@ library(tidyverse)
 library(tictoc)
 library(cowplot)
 
-source('Simulation Functions.R')
-source('helper functions.R')
+source('R/Simulation Functions.R')
+source('R/helper functions.R')
 
 ### Simulate full track w/ different numbers of time segments ###
 ## Create tracks w/ 10, 50, 100, and 500 segments while keeping 100 obs. per tseg.
@@ -293,6 +293,6 @@ plot_grid(legend.comp, p.comp, ncol = 1, rel_heights = c(0.1, 1))
 
 
 
-# write.csv(tracks, "CRW_MM_sim_weird.csv", row.names = F)
-# write.csv(brkpts, "CRW_MM_sim_brkpts_weird.csv", row.names = F)
+# write.csv(tracks, "data/CRW_MM_sim_weird.csv", row.names = F)
+# write.csv(brkpts, "data/CRW_MM_sim_brkpts_weird.csv", row.names = F)
 

@@ -1,7 +1,7 @@
 library(bcpa)
 library(tidyverse)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 set.seed(1)
 
@@ -11,8 +11,8 @@ set.seed(1)
 ### Prep Data ###
 #################
 
-d<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_weird.csv", as.is = T)
+d<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv", as.is = T)
 
 d.list<- bayesmove::df_to_list(d, ind = "id")
 d.list<- map(d.list, ~mutate(., time = seq(c(ISOdate(2020,4,29)), by = "hour",
@@ -121,6 +121,6 @@ names(all.brkpts)<- names(d.list)
 all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
-# write.csv(all.brkpts, "BCPA_allbrkpts_weird.csv", row.names = F)
-# write.csv(time, "BCPA_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(all.brkpts, "data/BCPA_allbrkpts_weird.csv", row.names = F)
+# write.csv(time, "data/BCPA_elapsed_time_weird.csv", row.names = F)  #units = min
 

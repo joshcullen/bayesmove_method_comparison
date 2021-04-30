@@ -13,7 +13,7 @@ library(lubridate)
 library(ggforce)
 library(progressr)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 ######################################################
@@ -21,8 +21,8 @@ source('helper functions.R')
 ######################################################
 
 #load and manipulate data
-dat<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_weird.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv", as.is = T)
 dat$dt<- 3600  #set time step
 names(dat)[4:5]<- c("dist","rel.angle")  #change names for step length and turning angle
 dat.list<- df_to_list(dat=dat, ind = "id")
@@ -192,9 +192,9 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
 #export results for hard-clustering and mixed-membership simulations
-# write.csv(dat_out, "CRW_MM_tsegs_weird.csv", row.names = F)
-# write.csv(all.brkpts, "Bayesian_allbreakpts_weird.csv", row.names = F)
-# write.csv(time, "Bayesian_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(dat_out, "data/CRW_MM_tsegs_weird.csv", row.names = F)
+# write.csv(all.brkpts, "data/Bayesian_allbreakpts_weird.csv", row.names = F)
+# write.csv(time, "data/Bayesian_elapsed_time_weird.csv", row.names = F)  #units = min
 
 
 
@@ -214,8 +214,8 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 set.seed(1)
 
 #load and manipulate data
-dat<- read.csv("CRW_MM_sim_parametric.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_parametric.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_parametric.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_parametric.csv", as.is = T)
 dat$dt<- 3600  #set time step
 names(dat)[4:5]<- c("dist","rel.angle")  #change names for step length and turning angle
 dat.list<- df_to_list(dat=dat, ind = "id")
@@ -384,6 +384,6 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
 #export results for hard-clustering and mixed-membership simulations
-# write.csv(dat_out, "CRW_MM_tsegs_parametric.csv", row.names = F)
-# write.csv(all.brkpts, "Bayesian_allbreakpts_parametric.csv", row.names = F)
-# write.csv(time, "Bayesian_elapsed_time_parametric.csv", row.names = F)  #units = min
+# write.csv(dat_out, "data/CRW_MM_tsegs_parametric.csv", row.names = F)
+# write.csv(all.brkpts, "data/Bayesian_allbreakpts_parametric.csv", row.names = F)
+# write.csv(time, "data/Bayesian_elapsed_time_parametric.csv", row.names = F)  #units = min

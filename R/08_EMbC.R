@@ -11,7 +11,7 @@ library(furrr)
 library(progressr)
 library(EMbC)
 
-source('Iterate EMbC.R')
+source('R/Iterate EMbC.R')
 
 
 ######################################################
@@ -20,7 +20,7 @@ source('Iterate EMbC.R')
 
 ### Prep Data ###
 
-dat<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
 dat$TA.abs<- abs(dat$TA)  #for proper analysis by EMbC
 
 dat.list<- df_to_list(dat, ind = "id") %>% 
@@ -82,7 +82,7 @@ embc.state.params<- map(embc.mod, extract.embc.params) %>%
   bind_rows(.id = "id")
 
 #save model params
-# write.csv(embc.state.params, "EMbC result state params_weird.csv")
+# write.csv(embc.state.params, "data/EMbC result state params_weird.csv")
 
 
 
@@ -119,8 +119,8 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 ### Export Results ###
 ######################
 
-# write.csv(dat2, "EMbC results_weird.csv", row.names = F)
-# write.csv(time, "EMbC_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(dat2, "data/EMbC results_weird.csv", row.names = F)
+# write.csv(time, "data/EMbC_elapsed_time_weird.csv", row.names = F)  #units = min
 
 
 
@@ -134,7 +134,7 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 
 ### Prep Data ###
 
-dat<- read.csv("CRW_MM_sim_parametric.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_parametric.csv", as.is = T)
 dat$TA.abs<- abs(dat$TA)  #for proper analysis by EMbC
 
 dat.list<- df_to_list(dat, ind = "id") %>% 
@@ -197,7 +197,7 @@ embc.state.params<- map(embc.mod, extract.embc.params) %>%
   bind_rows(.id = "id")
 
 #save model params
-# write.csv(embc.state.params, "EMbC result state params_parametric.csv")
+# write.csv(embc.state.params, "data/EMbC result state params_parametric.csv")
 
 
 
@@ -234,5 +234,5 @@ time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>%
 ### Export Results ###
 ######################
 
-# write.csv(dat2, "EMbC results_parametric.csv", row.names = F)
-# write.csv(time, "EMbC_elapsed_time_parametric.csv", row.names = F)  #units = min
+# write.csv(dat2, "data/EMbC results_parametric.csv", row.names = F)
+# write.csv(time, "data/EMbC_elapsed_time_parametric.csv", row.names = F)  #units = min

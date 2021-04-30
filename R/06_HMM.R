@@ -3,7 +3,7 @@ library(momentuHMM)
 library(tidyverse)
 library(bayesmove)
 
-source('Iterate HMMs.R')
+source('R/Iterate HMMs.R')
 
 
 ######################################################
@@ -12,7 +12,7 @@ source('Iterate HMMs.R')
 
 ### Prep Data ###
 
-d<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
+d<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
 names(d)[1]<- "ID"
 d.list<- df_to_list(d, ind = "ID")
 
@@ -75,8 +75,8 @@ hmm.angle.params<- map(hmm.params, ~pluck(., "angle")) %>%
   as.data.frame()
 
 #save model params
-# write.csv(hmm.step.params, "HMM result step params_weird.csv")
-# write.csv(hmm.angle.params, "HMM result angle params_weird.csv")
+# write.csv(hmm.step.params, "data/HMM result step params_weird.csv")
+# write.csv(hmm.angle.params, "data/HMM result angle params_weird.csv")
 
 
 
@@ -156,13 +156,7 @@ k.optim_BIC<- c(3, 3, 3, 3, 3,
                 4, 3, 3, 3, 4,
                 4, 4, 3, 3, 3)
 
-# Identify K per AIC and BIC 
-k.optim<- c(3, 3, 3, 3, 3,
-            3, 3, 3, 3, 3,
-            3, 3, 3, 3, 3,
-            3, 3, 3, 3, 3)
 
-table(k.optim)/20
 # AIC suggested 3 sims w/ 4 states
 # BIC suggested 4 sims w/ 4 states
 
@@ -180,8 +174,8 @@ hmm.states<- hmm.res %>%
 
 ### Export Results ###
 
-# write.csv(hmm.states, "HMM results_weird.csv", row.names = F)
-# write.csv(time, "HMM_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(hmm.states, "data/HMM results_weird.csv", row.names = F)
+# write.csv(time, "data/HMM_elapsed_time_weird.csv", row.names = F)  #units = min
 
 
 
@@ -198,7 +192,7 @@ hmm.states<- hmm.res %>%
 
 ### Prep Data ###
 
-d<- read.csv("CRW_MM_sim_parametric.csv", as.is = T)
+d<- read.csv("data/CRW_MM_sim_parametric.csv", as.is = T)
 names(d)[1]<- "ID"
 d.list<- df_to_list(d, ind = "ID")
 
@@ -261,8 +255,8 @@ hmm.angle.params<- map(hmm.params, ~pluck(., "angle")) %>%
   as.data.frame()
 
 #save model params
-# write.csv(hmm.step.params, "HMM result step params_parametric.csv")
-# write.csv(hmm.angle.params, "HMM result angle params_parametric.csv")
+# write.csv(hmm.step.params, "data/HMM result step params_parametric.csv")
+# write.csv(hmm.angle.params, "data/HMM result angle params_parametric.csv")
 
 
 
@@ -342,13 +336,6 @@ k.optim_BIC<- c(3, 3, 3, 3, 3,
                 3, 3, 4, 4, 4,
                 3, 3, 3, 4, 3)
 
-# Identify K per AIC and BIC 
-k.optim<- c(3, 3, 3, 3, 3,
-            3, 3, 3, 3, 3,
-            3, 3, 4, 4, 4,
-            3, 3, 3, 4, 3)
-
-table(k.optim)/20
 # AIC suggested 4 sims w/ 4 states
 # BIC suggested 4 sims w/ 4 states
 
@@ -366,5 +353,5 @@ hmm.states<- hmm.res %>%
 
 ### Export Results ###
 
-# write.csv(hmm.states, "HMM results_parametric.csv", row.names = F)
-# write.csv(time, "HMM_elapsed_time_parametric.csv", row.names = F)  #units = min
+# write.csv(hmm.states, "data/HMM results_parametric.csv", row.names = F)
+# write.csv(time, "data/HMM_elapsed_time_parametric.csv", row.names = F)  #units = min

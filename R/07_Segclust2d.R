@@ -6,8 +6,8 @@ library(furrr)
 library(future)
 library(progressr)
 
-source('helper functions.R')
-source('Iterate segclust2d.R')
+source('R/helper functions.R')
+source('R/Iterate segclust2d.R')
 
 
 ######################################################
@@ -16,8 +16,8 @@ source('Iterate segclust2d.R')
 
 ### Prep Data ###
 
-dat<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_weird.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv", as.is = T)
 
 dat<- dat %>% 
   drop_na(TA) %>%   #remove any missing values
@@ -83,9 +83,6 @@ plot_BIC(segclust.mod$`1_1`)
 # stateplot(segclust.mod[[i]])
 
 
-boop$`1_1`$outputs$`3 class - 10 segments`
-augment(boop$`1_1`, ncluster = 3, nseg = 10)
-
 
 
 
@@ -142,7 +139,7 @@ segclust.state.params<- map(segclust.mod, extract.segclust2d.behav.params, nclus
   bind_rows(.id = "id")
 
 #save model params
-# write.csv(segclust.state.params, "Segclust result state params_weird.csv")
+# write.csv(segclust.state.params, "data/Segclust result state params_weird.csv")
 
 
 
@@ -190,9 +187,9 @@ segclust.aug2<- segclust.mod %>%
 ### Export Results ###
 ######################
 
-# write.csv(all.brkpts, "Segclust2d allbrkpts_weird.csv", row.names = F)
-# write.csv(segclust.aug2, "Segclust2d results_weird.csv", row.names = F)
-# write.csv(time, "Segclust2d_elapsed_time_weird.csv", row.names = F)  #units = min
+# write.csv(all.brkpts, "data/Segclust2d allbrkpts_weird.csv", row.names = F)
+# write.csv(segclust.aug2, "data/Segclust2d results_weird.csv", row.names = F)
+# write.csv(time, "data/Segclust2d_elapsed_time_weird.csv", row.names = F)  #units = min
 
 
 
@@ -207,8 +204,8 @@ segclust.aug2<- segclust.mod %>%
 
 ### Prep Data ###
 
-dat<- read.csv("CRW_MM_sim_parametric.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_parametric.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_parametric.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_parametric.csv", as.is = T)
 
 dat<- dat %>% 
   drop_na(TA) %>%   #remove any missing values
@@ -312,7 +309,7 @@ segclust.state.params<- map(segclust.mod, extract.segclust2d.behav.params, nclus
   bind_rows(.id = "id")
 
 #save model params
-# write.csv(segclust.state.params, "Segclust result state params_parametric.csv")
+# write.csv(segclust.state.params, "data/Segclust result state params_parametric.csv")
 
 
 
@@ -360,6 +357,6 @@ segclust.aug2<- segclust.mod %>%
 ### Export Results ###
 ######################
 
-# write.csv(all.brkpts, "Segclust2d allbrkpts_parametric.csv", row.names = F)
-# write.csv(segclust.aug2, "Segclust2d results_parametric.csv", row.names = F)
-# write.csv(time, "Segclust2d_elapsed_time_parametric.csv", row.names = F)  #units = min
+# write.csv(all.brkpts, "data/Segclust2d allbrkpts_parametric.csv", row.names = F)
+# write.csv(segclust.aug2, "data/Segclust2d results_parametric.csv", row.names = F)
+# write.csv(time, "data/Segclust2d_elapsed_time_parametric.csv", row.names = F)  #units = min
