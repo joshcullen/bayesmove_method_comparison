@@ -20,12 +20,12 @@ library(future)
 library(furrr)
 library(progressr)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 #load and manipulate data
-dat<- read.csv("CRW_MM_sim_weird.csv", as.is = T)
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_weird.csv", as.is = T)
+dat<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv", as.is = T)
 dat$dt<- 3600  #set time step
 names(dat)[4:5]<- c("dist","rel.angle")  #change names for step length and turning angle
 dat.list<- df_to_list(dat=dat, ind = "id")
@@ -47,7 +47,8 @@ set.seed(1)
 
 #define bin number and limits for step lengths
 hist(dat$dist, 100)
-dist.bin.lims = c(seq(0, 40, length.out = 5), max(dat$dist, na.rm = T))  #5 bins
+quant.95<- round(quantile(dat$dist, 0.95, na.rm = T))  #define last been as >95% of data (= 30)
+dist.bin.lims = c(seq(0, quant.95, length.out = 5), max(dat$dist, na.rm = T))  #5 bins
 
 
 #Viz limits on continuous vars
@@ -145,8 +146,8 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
 # Export results
-# write.csv(dat_out, "Sensitivity_results_5bins_equal.csv", row.names = F)
-# write.csv(all.brkpts, "Sensitivity_allbreakpts_5bins_equal.csv", row.names = F)
+# write.csv(dat_out, "data/Sensitivity_results_5bins_equal.csv", row.names = F)
+# write.csv(all.brkpts, "data/Sensitivity_allbreakpts_5bins_equal.csv", row.names = F)
 
 
 
@@ -162,7 +163,7 @@ set.seed(1)
 
 #define bin number and limits for step lengths
 hist(dat$dist, 100)
-dist.bin.lims = c(seq(0, 40, length.out = 10), max(dat$dist, na.rm = T))  #10 bins
+dist.bin.lims = c(seq(0, quant.95, length.out = 10), max(dat$dist, na.rm = T))  #10 bins
 
 
 #Viz limits on continuous vars
@@ -253,8 +254,8 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
 # Export results
-# write.csv(dat_out, "Sensitivity_results_10bins_equal.csv", row.names = F)
-# write.csv(all.brkpts, "Sensitivity_allbreakpts_10bins_equal.csv", row.names = F)
+# write.csv(dat_out, "data/Sensitivity_results_10bins_equal.csv", row.names = F)
+# write.csv(all.brkpts, "data/Sensitivity_allbreakpts_10bins_equal.csv", row.names = F)
 
 
 
@@ -360,8 +361,8 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 
 
 # Export results
-# write.csv(dat_out, "Sensitivity_results_10bins_quantile.csv", row.names = F)
-# write.csv(all.brkpts, "Sensitivity_allbreakpts_10bins_quantile.csv", row.names = F)
+# write.csv(dat_out, "data/Sensitivity_results_10bins_quantile.csv", row.names = F)
+# write.csv(all.brkpts, "data/Sensitivity_allbreakpts_10bins_quantile.csv", row.names = F)
 
 
 
@@ -370,10 +371,10 @@ all.brkpts<- bind_rows(all.brkpts, .id = 'id')
 ### Create Figure Showing Comparison of Bin Locations ###
 #########################################################
 
-equal.5bins<- c(seq(0, 40, length.out = 5), max(dat$dist, na.rm = T)) %>%   #5 bins
+equal.5bins<- c(seq(0, quant.95, length.out = 5), max(dat$dist, na.rm = T)) %>%   #5 bins
   data.frame(lims = .) %>% 
   mutate(method = "Equal width - 5 bins")
-equal.10bins<- c(seq(0, 40, length.out = 10), max(dat$dist, na.rm = T)) %>%   #10 bins
+equal.10bins<- c(seq(0, quant.95, length.out = 10), max(dat$dist, na.rm = T)) %>%   #10 bins
   data.frame(lims = .) %>% 
   mutate(method = "Equal width - 10 bins")
 quant.5bins<- quantile(dat$dist, c(0, 0.25, 0.50, 0.75, 0.90, 1), na.rm = T) %>%   #5 bins

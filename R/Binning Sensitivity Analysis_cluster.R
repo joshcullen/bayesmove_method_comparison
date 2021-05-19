@@ -10,7 +10,7 @@ library(future)
 library(furrr)
 library(progressr)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 
@@ -21,7 +21,7 @@ source('helper functions.R')
 set.seed(1)
 
 #get data
-dat<- read.csv("Sensitivity_results_5bins_equal.csv", as.is = T)
+dat<- read.csv("data/Sensitivity_results_5bins_equal.csv", as.is = T)
 dat.list<- df_to_list(dat = dat, ind = "id")  #for later behavioral assignment
 nbins<- c(5,8)  #number of bins per param (in order)
 dat_red<- dat %>% 
@@ -110,7 +110,7 @@ par(ask=F)
 set.seed(1)
 
 #get data
-dat<- read.csv("Sensitivity_results_10bins_equal.csv", as.is = T)
+dat<- read.csv("data/Sensitivity_results_10bins_equal.csv", as.is = T)
 dat.list<- df_to_list(dat = dat, ind = "id")  #for later behavioral assignment
 nbins<- c(10,8)  #number of bins per param (in order)
 dat_red<- dat %>% 
@@ -188,7 +188,7 @@ for (i in 1:length(behav.res)) {
 }
 par(ask=F)
 
-### Only 2 states distinguishable for all tracks
+### 3 states distinguishable for 3/5 10k tracks; otherwise 2 states
 
 
 

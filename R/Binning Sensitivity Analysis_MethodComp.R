@@ -10,22 +10,18 @@ library(cowplot)
 library(viridis)
 library(ggnewscale)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 # Load breakpoints
-equal.5bins.brkpts<- read.csv("Sensitivity_allbreakpts_5bins_equal.csv")
-equal.10bins.brkpts<- read.csv("Sensitivity_allbreakpts_10bins_equal.csv")
-quant.5bins.brkpts<- read.csv("Bayesian_allbreakpts_weird.csv")  #from original analysis
-quant.10bins.brkpts<- read.csv("Sensitivity_allbreakpts_10bins_quantile.csv")
+equal.5bins.brkpts<- read.csv("data/Sensitivity_allbreakpts_5bins_equal.csv")
+equal.10bins.brkpts<- read.csv("data/Sensitivity_allbreakpts_10bins_equal.csv")
+quant.5bins.brkpts<- read.csv("data/Bayesian_allbreakpts_weird.csv")  #from original analysis
+quant.10bins.brkpts<- read.csv("data/Sensitivity_allbreakpts_10bins_quantile.csv")
 
-# Load results
-# bayes.res_weird<- read.csv("Modeled MM Sim Tracks w Behav_weird.csv")
-# hmm.res_weird<- read.csv("HMM results_weird.csv")
-# segclust.res_weird<- read.csv("Segclust2d results_weird.csv")
 
 # Load true breakpoints
-true.brkpts_weird<- read.csv("CRW_MM_sim_brkpts_weird.csv")
+true.brkpts_weird<- read.csv("data/CRW_MM_sim_brkpts_weird.csv")
 
 
 
@@ -45,7 +41,8 @@ equal.5bins.brkpts$method<- rep("equal_5bins", nrow(equal.5bins.brkpts))
 equal.10bins.brkpts$method<- rep("equal_10bins", nrow(equal.10bins.brkpts))
 quant.5bins.brkpts$method<- rep("quant_5bins", nrow(quant.5bins.brkpts))
 quant.10bins.brkpts$method<- rep("quant_10bins", nrow(quant.10bins.brkpts))
-all.brkpts<- rbind(equal.5bins.brkpts, equal.10bins.brkpts, quant.5bins.brkpts, quant.10bins.brkpts)
+all.brkpts<- rbind(equal.5bins.brkpts, equal.10bins.brkpts, quant.5bins.brkpts,
+                   quant.10bins.brkpts)
 
 
 brkpt.acc<- all.brkpts %>% 
