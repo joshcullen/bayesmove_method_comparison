@@ -274,11 +274,12 @@ extract.behav.props_weird=function(params, lims, behav.names){
 
 #--------------------------------------
 
-extract.behav.props_segclust=function(params, lims, behav.names){  
-  #only for segclust2d results that use a normal distribution
+extract.behav.props_norm=function(params, lims, behav.names){  
+  #only for segclust2d and EMbC results that use a normal distribution
   #only defined for step lengths ('dist') and turning angles ('rel.angle')
   #params must be a list of data frames storing 4 cols for the params of the normal distributions (mu.SL, mu.TA, sd.SL, sd.TA)
   #lims must be a list of numeric vectors
+  #first makes estimate for abs(TA) and then divides by two and flips symmetrically to match Bayesian and HMM estimates
   
   #number of bins for both params are already defined as 5 (SL) and 8 (TA)
   #order of states is set as encamped, ARS, transit
@@ -337,7 +338,7 @@ extract.behav.props_segclust=function(params, lims, behav.names){
       }
     }
     
-    props.TA[[j]]<- c(rev(bins.estim), bins.estim)  #create symmetrical distribution
+    props.TA[[j]]<- c(rev(bins.estim)/2, bins.estim/2)  #create symmetrical distribution
   }
   
   names(props.TA)<- behav.names

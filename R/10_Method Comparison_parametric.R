@@ -44,22 +44,30 @@ bayes.time<- data.frame(time = seg.time$time + lda.time$time,
                         track_length = seg.time$track_length)
 
 time<- rbind(bayes.time, bcpa.time, hmm.time, segclust.time, embc.time)
-time$method<- c(rep(c("Bayesian", "BCPA", "HMM"), each = 20),
+time$method<- c(rep(c("M4", "BCPA", "HMM"), each = 20),
                 rep("Segclust2d", 15),
-                rep("EMbC", 20))
+                rep("EMbC", 20)) %>% 
+  factor(., levels = c('M4','HMM','Segclust2d','EMbC','BCPA'))
 time$track_length<- time$track_length %>% 
   factor(., levels = c('1k','5k','10k','50k'))
 
+pal1<- c(wes_palette("Darjeeling1", 5)[-4], "mediumorchid")
+
 
 p.time<- ggplot(time, aes(track_length, time, fill = method, color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "point", shape = 15, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
-  labs(x="", y = "Elapsed Time (min)\n") +
+  labs(x="", y = "Elapsed Time (min)") +
+  # labs(x = '', y = expression(log[10]~'(Elapsed Time) (min)')) +
   scale_x_discrete(labels = c(1000,5000,10000,50000)) +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")) +
+  scale_y_log10(breaks = c(10^(-2:2), 200, 400),
+                labels = c(0.01, 0.1, 1, 10, 100, 200, 400)) +
+  annotation_logticks(sides = "lr") +
+  scale_fill_manual("", values = pal1) +
+  scale_color_manual("", values = pal1) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
         axis.text = element_text(size = 14),
@@ -73,7 +81,7 @@ p.time<- ggplot(time, aes(track_length, time, fill = method, color = method)) +
 ### Compare Breakpoints ###
 ###########################
 
-bayes.brkpts$method<- rep("Bayesian", nrow(bayes.brkpts))
+bayes.brkpts$method<- rep("M4", nrow(bayes.brkpts))
 bcpa.brkpts$method<- rep("BCPA", nrow(bcpa.brkpts))
 segclust.brkpts$method<- rep("Segclust2d", nrow(segclust.brkpts))
 all.brkpts<- rbind(bayes.brkpts, bcpa.brkpts, segclust.brkpts)
@@ -95,17 +103,19 @@ brkpt.acc<- all.brkpts %>%
 
 brkpt.acc$track_length<- brkpt.acc$track_length %>% 
   factor(., levels = c('1000','5000','10000','50000'))
+brkpt.acc$method<- factor(brkpt.acc$method, levels = c('M4','Segclust2d','BCPA'))
 
 
 #Accuracy (includes 'accurate' and 'accurate duplicate' classifications)
 p.brk<- ggplot(brkpt.acc, aes(track_length, freq, fill = method, color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "point", shape = 15, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   labs(x="", y = "Accuracy of Breakpoints\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)], guide = F) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)], guide = F) +
+  scale_fill_manual("", values = pal1[c(1,3,5)], guide = F) +
+  scale_color_manual("", values = pal1[c(1,3,5)], guide = F) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   ylim(0,1) +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
@@ -148,7 +158,7 @@ embc.res_parametric<- embc.res_parametric %>%
   bind_rows()
 
 # Assign identifiers by method and make consistent behavior colname
-bayes.res_parametric$method<- rep("Bayesian", nrow(bayes.res_parametric))
+bayes.res_parametric$method<- rep("M4", nrow(bayes.res_parametric))
 hmm.res_parametric$method<- rep("HMM", nrow(hmm.res_parametric))
 segclust.res_parametric$method<- rep("Segclust2d", nrow(segclust.res_parametric))
 embc.res_parametric$method<- rep("EMbC", nrow(embc.res_parametric))
@@ -282,13 +292,14 @@ embc.res_parametric3<- embc.res_parametric.agg %>%
 # Combine all datasets
 res_parametric<- rbind(bayes.res_parametric[,c("id","behav_fine","behav_coarse","track_length",
                                                "state", "method")],
-                  hmm.res_parametric3[,c("id","behav_fine","behav_coarse","track_length","state",
-                                         "method")],
+                  hmm.res_parametric3[,c("id","behav_fine","behav_coarse","track_length",
+                                         "state","method")],
                   segclust.res_parametric3[,c("id","behav_fine","behav_coarse","track_length",
                                               "state", "method")],
-                  embc.res_parametric3[,c("id","behav_fine","behav_coarse","track_length","state",
-                                     "method")])
-
+                  embc.res_parametric3[,c("id","behav_fine","behav_coarse","track_length"
+                                          ,"state","method")])
+res_parametric$method<- factor(res_parametric$method, levels = c('M4','HMM','Segclust2d',
+                                                                 'EMbC'))
 
 
 ## Overall
@@ -317,14 +328,15 @@ summ.stats_coarse_parametric$track_length<- summ.stats_coarse_parametric$track_l
 
 p.coarse_parametric<- ggplot(summ.stats_coarse_parametric, aes(track_length,acc,fill = method,
                                                      color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "point", shape = 15, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   ylim(0,1) +
   labs(x="\nTrack Length (observations)", y = "Accuracy of Behavior Estimates\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
+  scale_fill_manual("", values = pal1[c(1:4)]) +
+  scale_color_manual("", values = pal1[c(1:4)]) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   theme_bw() +
   theme(panel.grid = element_blank(),
         axis.title = element_text(size = 16),
@@ -595,22 +607,25 @@ rmse.df_parametric<- data.frame(id = rep(unique(as.character(hmm.res_parametric$
                                                  levels = c("1000","5000","10000","50000")),
                            rmse = c(bayes.rmse_parametric, hmm.rmse_parametric,
                                     embc.rmse_parametric),
-                           method = rep(c("Bayesian","HMM","EMbC"), each = 20))
+                           method = rep(c("M4","HMM","EMbC"), each = 20))
 rmse.df_parametric<- rbind(rmse.df_parametric, segclust.rmse.df)
+rmse.df_parametric$method<- factor(rmse.df_parametric$method, levels = c('M4','HMM',
+                                                                         'Segclust2d','EMbC'))
 
 
 #Plot results
 
 p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse, fill = method,
                                                    color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "point", shape = 15, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   labs(x="\nTrack Length (observations)", y = "RMSE\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
+  scale_fill_manual("", values = pal1[c(1:4)]) +
+  scale_color_manual("", values = pal1[c(1:4)]) +
   scale_y_continuous(breaks = seq(0, 0.6, by = 0.1), limits = c(0, 0.65)) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   theme_bw() +
   theme(panel.grid = element_blank(),
         axis.title = element_text(size = 16),
@@ -621,15 +636,23 @@ p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse, fill = me
 
 
 
-plot_grid(NULL, NULL, NULL,
-          p.time, NULL, p.brk,
+res.comp<- plot_grid(NULL, NULL, NULL,
+          p.time + theme(legend.position = "none"), NULL, p.brk,
           # NULL, NULL, NULL,
           # p.coarse, NULL, p.rmse,
           NULL, NULL, NULL,
           p.coarse_parametric, NULL, p.rmse_parametric,
           align = "hv", nrow = 4, rel_widths = c(1,0.1,1), rel_heights = c(0.2,1,0.1,1))
 
-# ggsave("Figure 3 (method comparison)_updatedParametric.png", width = 12, height = 12, units = "in", dpi = 330)
+# extract the legend from one of the plots
+legend.comp_res<- get_legend(p.time + theme(legend.position="top",
+                                            legend.text = element_text(size = 14)))
+
+# add the legend underneath the row we made earlier. Give it 10% of the height
+# of one plot (via rel_heights).
+plot_grid(legend.comp_res, res.comp, ncol = 1, rel_heights = c(0.1, 1))
+
+ggsave("Figure 3 (method comparison)_updatedParametric.png", width = 12, height = 9, units = "in", dpi = 330)
 
 
 
@@ -771,14 +794,14 @@ hmm.b_parametric<- map2(hmm.SL.params2_parametric, hmm.TA.params2_parametric,
 
 
 segclust.b_parametric<- map(segclust.params2_parametric,
-                       ~extract.behav.props_segclust(params = .x,
-                                                     lims = list(dist.bin.lims, angle.bin.lims),
-                                                     behav.names = c("Encamped","ARS","Transit"))
+                            ~extract.behav.props_norm(params = .x,
+                                                      lims = list(dist.bin.lims,angle.bin.lims),
+                                                      behav.names = c("Encamped","ARS","Transit"))
 )
 
 
 embc.b_parametric<- map(embc.params2_parametric,
-                   ~extract.behav.props_segclust(params = .x,
+                   ~extract.behav.props_norm(params = .x,
                                                  lims = list(dist.bin.lims, angle.bin.lims),
                                                  behav.names = c("Encamped","ARS","Transit"))
 )
@@ -809,13 +832,13 @@ bayes.b_parametric$behav<- bayes.b_parametric$behav %>%
 p.distfit<- ggplot(true.b_parametric, aes(x = bin, y = prop, fill = behav)) +
   geom_bar(stat = 'identity') +
   geom_point(data = hmm.b_parametric[[15]], aes(x=bin,y=prop,group=behav), pch=21, size=2,
-             fill=wes_palette("Darjeeling1")[4], color="black", stroke=1) +
+             fill=pal1[2], color="black", stroke=1) +
   geom_point(data = segclust.b_parametric[[15]], aes(x=bin,y=prop,group=behav), pch=21, size=2,
-             fill=wes_palette("Darjeeling1")[5], color="black", stroke=1) +
+             fill=pal1[3], color="black", stroke=1) +
   geom_point(data = embc.b_parametric[[15]], aes(x=bin,y=prop,group=behav), pch=21, size=2,
-             fill=wes_palette("Darjeeling1")[3], color="black", stroke=1) +
+             fill=pal1[4], color="black", stroke=1) +
   geom_point(data = bayes.b_parametric, aes(x=bin, y=prop, group = behav), pch=21, size = 2,
-             fill=wes_palette("Darjeeling1")[1], color="black", stroke=1) +
+             fill=pal1[1], color="black", stroke=1) +
   labs(x = "\nBin", y = "Proportion\n") +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
@@ -908,7 +931,7 @@ hmm.rmse_parametric<- bind_rows(hmm.rmse_parametric) %>%
 #Segclust2d
 segclust.rmse_parametric<- list()
 for (i in 1:length(segclust.params2_parametric)) {
-  segclust.b_parametric<- extract.behav.props_segclust(params = segclust.params2_parametric[[i]],
+  segclust.b_parametric<- extract.behav.props_norm(params = segclust.params2_parametric[[i]],
                                                   lims = list(dist.bin.lims, angle.bin.lims),
                                                   behav.names = c("Encamped","ARS","Transit"))
   
@@ -939,7 +962,7 @@ segclust.rmse_parametric<- bind_rows(segclust.rmse_parametric) %>%
 #EMbC
 embc.rmse_parametric<- list()
 for (i in 1:length(embc.params2_parametric)) {
-  embc.b_parametric<- extract.behav.props_segclust(params = embc.params2_parametric[[i]],
+  embc.b_parametric<- extract.behav.props_norm(params = embc.params2_parametric[[i]],
                                               lims = list(dist.bin.lims, angle.bin.lims),
                                               behav.names = c("Encamped","ARS","Transit"))
   
@@ -977,8 +1000,10 @@ rmse.df_parametric<- data.frame(id = rep(rep(names(behav.res_parametric), 3), ea
                                                  levels = c("1000","5000","10000","50000")),
                            rmse = rbind(bayes.rmse_parametric, hmm.rmse_parametric,
                                         embc.rmse_parametric),
-                           method = rep(c("Bayesian","HMM","EMbC"), each = 40))
+                           method = rep(c("M4","HMM","EMbC"), each = 40))
 rmse.df_parametric<- rbind(rmse.df_parametric, segclust.rmse.df)
+rmse.df_parametric$method<- factor(rmse.df_parametric$method,
+                                   levels = c('M4','HMM','Segclust2d','EMbC'))
 
 
 p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse.value, fill = method,
@@ -988,14 +1013,13 @@ p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse.value, fil
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   labs(x="\nTrack Length (observations)", y = "RMSE\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,3:5)]) +
-  ylim(0,0.42) +
+  scale_fill_manual("", values = pal1[c(1:4)]) +
+  scale_color_manual("", values = pal1[c(1:4)]) +
   theme_bw() +
   theme(panel.grid = element_blank(),
         axis.title = element_text(size = 16),
         axis.text = element_text(size = 14),
-        legend.position = c(0.1,0.88),
+        legend.position = c(0.9,0.88),
         legend.background = element_rect(fill = "transparent"),
         legend.text = element_text(size = 14),
         strip.text = element_text(size = 14, face = "bold")) +
@@ -1006,13 +1030,13 @@ p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse.value, fil
 
 ## Make composite
 library(gridExtra)
-# png("Figure S1 (rmse from sim)_parametric.png", width = 14.5, height = 5.5, units = "in", res = 330)
+png("Figure S1 (rmse from sim)_parametric.png", width = 14.5, height = 5.5, units = "in", res = 330)
 
 grid.arrange(p.distfit, p.rmse_parametric, heights = c(0.2, 1),
              widths = c(1, 0.2, 1, 0.5),
              layout_matrix = rbind(c(NA, NA, NA, NA),
                                    c(3, NA, 4, 4)))
-# dev.off()
+dev.off()
 
 
 
@@ -1195,16 +1219,7 @@ plot_data_TA_hmm$behavior<- factor(plot_data_TA_hmm$behavior,
                                    levels = c("Encamped","ARS","Transit"))
 
 
-plot_data_TA_segclust1<- 
-  pmap_df(segclust.TA.df_parametric,
-          function(id, par2, par4, behavior, track_length) {
-            tibble(id = id,
-                   x = seq(-pi, 0, by = (pi/256)),
-                   y = dnorm(x, mean = -par2, sd = par4),
-                   behavior = behavior,
-                   track_length = track_length)
-          })
-plot_data_TA_segclust2<- 
+plot_data_TA_segclust<- 
   pmap_df(segclust.TA.df_parametric,
           function(id, par2, par4, behavior, track_length) {
             tibble(id = id,
@@ -1213,22 +1228,12 @@ plot_data_TA_segclust2<-
                    behavior = behavior,
                    track_length = track_length)
           })
-plot_data_TA_segclust<- rbind(plot_data_TA_segclust1, plot_data_TA_segclust2[-1,])
 plot_data_TA_segclust$behavior<- factor(plot_data_TA_segclust$behavior,
                                     levels = c("Encamped","ARS","Transit"))
 
 
 
-plot_data_TA_embc1<- 
-  pmap_df(embc.TA.df_parametric,
-          function(id, par2, par4, behavior, track_length) {
-            tibble(id = id,
-                   x = seq(-pi, 0, by = (pi/256)),
-                   y = dnorm(x, mean = -par2, sd = par4),
-                   behavior = behavior,
-                   track_length = track_length)
-          })
-plot_data_TA_embc2<- 
+plot_data_TA_embc<- 
   pmap_df(embc.TA.df_parametric,
           function(id, par2, par4, behavior, track_length) {
             tibble(id = id,
@@ -1237,7 +1242,6 @@ plot_data_TA_embc2<-
                    behavior = behavior,
                    track_length = track_length)
           })
-plot_data_TA_embc<- rbind(plot_data_TA_embc1, plot_data_TA_embc2[-1,])
 plot_data_TA_embc$behavior<- factor(plot_data_TA_embc$behavior,
                                     levels = c("Encamped","ARS","Transit"))
 
@@ -1271,9 +1275,12 @@ p.TA_hmm<- ggplot(data = plot_data_TA_hmm, aes(color = track_length)) +
   facet_wrap(~behavior, nrow = 3, scales = "free")
 
 
+true_plot_TA_abs<- true_plot_data_TA %>% 
+  filter(x >= 0) %>% 
+  mutate_at("y", ~{.*2})
 p.TA_segclust<- ggplot(data = plot_data_TA_segclust, aes(color = track_length)) +
   geom_line(aes(group = id, x = x, y = y), alpha = .4) + 
-  geom_line(data = true_plot_data_TA, aes(group = id, x = x, y = y), color = "black",
+  geom_line(data = true_plot_TA_abs, aes(group = id, x = x, y = y), color = "black",
             size = 0.9) +
   labs(x = "\nTurning Angle (radians)", y = "Density\n") +
   scale_color_brewer("Track Length", palette = "Dark2") +
@@ -1287,7 +1294,7 @@ p.TA_segclust<- ggplot(data = plot_data_TA_segclust, aes(color = track_length)) 
 
 p.TA_embc<- ggplot(data = plot_data_TA_embc, aes(color = track_length)) +
   geom_line(aes(group = id, x = x, y = y), alpha = .4) + 
-  geom_line(data = true_plot_data_TA, aes(group = id, x = x, y = y), color = "black",
+  geom_line(data = true_plot_TA_abs, aes(group = id, x = x, y = y), color = "black",
             size = 0.9) +
   labs(x = "\nTurning Angle (radians)", y = "Density\n") +
   scale_color_brewer("Track Length", palette = "Dark2") +
@@ -1302,7 +1309,7 @@ p.TA_embc<- ggplot(data = plot_data_TA_embc, aes(color = track_length)) +
 
 ## Create composite plot w/ shared legend for HMM
 p.comp_hmm<- plot_grid(p.SL_hmm + theme(legend.position="none") + 
-                         ggtitle("HMM", subtitle = "Standard distributions"),
+                         ggtitle("HMM", subtitle = "Common distributions"),
                        NA,
                        p.TA_hmm + theme(legend.position="none") + 
                          ggtitle("", subtitle = ""),
@@ -1323,7 +1330,7 @@ plot_grid(p.comp_hmm, legend.comp_hmm, ncol = 1, rel_heights = c(1, 0.1))
 
 ## Create composite plot w/ shared legend for segclust
 p.comp_segclust<- plot_grid(p.SL_segclust + theme(legend.position="none") + 
-                              ggtitle("Segclust2d", subtitle = "Standard distributions"),
+                              ggtitle("Segclust2d", subtitle = "Common distributions"),
                             NA,
                             p.TA_segclust + theme(legend.position="none") + 
                               ggtitle("", subtitle = ""),
@@ -1345,7 +1352,7 @@ plot_grid(p.comp_segclust, legend.comp_segclust, ncol = 1, rel_heights = c(1, 0.
 
 ## Create composite plot w/ shared legend for EMbC
 p.comp_embc<- plot_grid(p.SL_embc + theme(legend.position="none") + 
-                          ggtitle("EMbC", subtitle = "Standard distributions"),
+                          ggtitle("EMbC", subtitle = "Common distributions"),
                             NA,
                             p.TA_embc + theme(legend.position="none") + 
                           ggtitle("", subtitle = ""),

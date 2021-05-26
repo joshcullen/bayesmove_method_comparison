@@ -7,16 +7,16 @@ library(bayesmove)
 library(tidyverse)
 library(wesanderson)
 
-source('helper functions.R')
+source('R/helper functions.R')
 
 
 ### Load breakpoint estimates
-bayes.brkpts<- read.csv("Bayesian_allbreakpts_weird.csv")
-bcpa.brkpts<- read.csv("BCPA_allbrkpts_weird.csv")
-segclust.brkpts<- read.csv("Segclust2d allbrkpts_weird.csv")
+bayes.brkpts<- read.csv("data/Bayesian_allbreakpts_weird.csv")
+bcpa.brkpts<- read.csv("data/BCPA_allbrkpts_weird.csv")
+segclust.brkpts<- read.csv("data/Segclust2d allbrkpts_weird.csv")
 
 # Load true breakpoints
-true.brkpts<- read.csv("CRW_MM_sim_brkpts_weird.csv")
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv")
 
 
 
@@ -40,7 +40,7 @@ for (i in 1:length(bayes.list)) {
 
 names(bayes.list2)<- names(bayes.list)
 bayes.5_15<- bind_rows(bayes.list2, .id = 'id') %>% 
-  mutate(method = "Bayesian", scenario = 1)
+  mutate(method = "M4", scenario = 1)
 
 
 #BCPA
@@ -99,7 +99,7 @@ for (i in 1:length(bayes.list)) {
 
 names(bayes.list2)<- names(bayes.list)
 bayes.20_50<- bind_rows(bayes.list2, .id = 'id') %>% 
-  mutate(method = "Bayesian", scenario = 3)
+  mutate(method = "M4", scenario = 3)
 
 
 #BCPA
@@ -140,7 +140,7 @@ segclust.20_50<- bind_rows(segclust.list2, .id = 'id') %>%
 ### Wrangle data and plot for comparison
 
 bayes.brkpts2<- bayes.brkpts %>% 
-  mutate(method = "Bayesian", scenario = 2)
+  mutate(method = "M4", scenario = 2)
 bcpa.brkpts2<- bcpa.brkpts %>% 
   mutate(method = "BCPA", scenario = 2)
 segclust.brkpts2<- segclust.brkpts %>% 
@@ -169,17 +169,20 @@ brkpt.acc<- all.brkpts %>%
 
 brkpt.acc$track_length<- brkpt.acc$track_length %>% 
   factor(., levels = c('1000','5000','10000','50000'))
+brkpt.acc$method<- factor(brkpt.acc$method, levels = c('M4','Segclust2d','BCPA'))
 
+pal1<- c(wes_palette("Darjeeling1", 5)[-4], "mediumorchid")
 
 #Accuracy (includes 'accurate' and 'accurate duplicate' classifications)
 ggplot(brkpt.acc, aes(track_length, freq, fill = method, color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "crossbar", width = 0.6, fatten=1.5, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   labs(x = "\nTrack Length", y = "Accuracy of Breakpoints\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)]) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)]) +
+  scale_fill_manual("", values = pal1[c(1,3,5)]) +
+  scale_color_manual("", values = pal1[c(1,3,5)]) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   ylim(0,1) +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
@@ -219,17 +222,19 @@ brkpt.miss<- all.brkpts %>%
 
 brkpt.miss$track_length<- brkpt.miss$track_length %>% 
   factor(., levels = c('1000','5000','10000','50000'))
+brkpt.miss$method<- factor(brkpt.miss$method, levels = c('M4','Segclust2d','BCPA'))
 
 
 #Accuracy (includes 'accurate' and 'accurate duplicate' classifications)
 ggplot(brkpt.miss, aes(track_length, freq, fill = method, color = method)) +
-  geom_boxplot() +
+  geom_boxplot(width = 0.75) +
   stat_summary(geom = "crossbar", width = 0.6, fatten=1.5, color="black",
                position = position_dodge(0.75),
                fun.data = function(x){c(y=median(x), ymin=median(x), ymax=median(x))}) +
   labs(x = "\nTrack Length", y = "Proportion of Missed Breakpoints\n") +
-  scale_fill_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)]) +
-  scale_color_manual("", values = wes_palette("Darjeeling1")[c(1,2,5)]) +
+  scale_fill_manual("", values = pal1[c(1,3,5)]) +
+  scale_color_manual("", values = pal1[c(1,3,5)]) +
+  geom_vline(xintercept = c(1.5, 2.5, 3.5)) +
   ylim(0,1) +
   theme_bw() +
   theme(axis.title = element_text(size = 16),
