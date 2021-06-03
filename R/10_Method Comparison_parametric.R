@@ -652,7 +652,7 @@ legend.comp_res<- get_legend(p.time + theme(legend.position="top",
 # of one plot (via rel_heights).
 plot_grid(legend.comp_res, res.comp, ncol = 1, rel_heights = c(0.1, 1))
 
-ggsave("Figure 3 (method comparison)_updatedParametric.png", width = 12, height = 9, units = "in", dpi = 330)
+# ggsave("Figure 3 (method comparison)_updatedParametric.png", width = 12, height = 9, units = "in", dpi = 330)
 
 
 
@@ -1030,13 +1030,13 @@ p.rmse_parametric<- ggplot(rmse.df_parametric, aes(track_length, rmse.value, fil
 
 ## Make composite
 library(gridExtra)
-png("Figure S1 (rmse from sim)_parametric.png", width = 14.5, height = 5.5, units = "in", res = 330)
+# png("Figure S1 (rmse from sim)_parametric.png", width = 14.5, height = 5.5, units = "in", res = 330)
 
 grid.arrange(p.distfit, p.rmse_parametric, heights = c(0.2, 1),
              widths = c(1, 0.2, 1, 0.5),
              layout_matrix = rbind(c(NA, NA, NA, NA),
                                    c(3, NA, 4, 4)))
-dev.off()
+# dev.off()
 
 
 

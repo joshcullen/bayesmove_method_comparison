@@ -61,7 +61,9 @@ for (i in 1:length(obs.list)) {
 #Check traceplot of log likelihood
 par(mfrow=c(2,2), ask = T)
 for (i in 1:length(res)) {
-plot(res[[i]]$loglikel, type='l', main = paste("ID",names(obs.list)[i]))
+  plot(res[[i]]$loglikel, type='l', main = paste("ID",names(obs.list)[i]),
+       xlab = "Iteration", ylab = "Log Likelihood")
+  abline(v = ngibbs/2, col = "red", lwd = 1.5)
 }
 par(mfrow=c(1,1), ask=F)
 
@@ -93,7 +95,11 @@ par(mfrow=c(1,1), ask=F)
 
 #Determine proportion of behaviors (across all time segments)
 purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>% 
-  purrr::map(., ~sum(.[1:3]))
+  purrr::map(., ~sum(.[1:2]))  #for top 2 states
+purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>% 
+  purrr::map(., ~sum(.[1:3]))  #for top 3 states
+purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>%
+  purrr::map(., ~sum(.[1:4]))  #for top 4 states
   
 
 ## Viz histograms from model
@@ -132,7 +138,7 @@ par(ask=F)
 behav.order<- list(c(1,3,2), c(1,3,2), c(2,3,1), c(2,1,3), c(1,3,2),
                    c(2,1,3), c(1,2,3), c(2,1,3), c(1,2,3), c(2,1,3),
                    c(1,2,3), c(2,1,3), c(1,2,3), c(1,3,2), c(1,3,2),
-                   c(1,2,3), c(2,3,1), c(1,2,3), c(3,2,1), c(3,2,1))
+                   c(2,3,1), c(3,1,2), c(3,1,2), c(3,2,1), c(2,3,1))
 
 
 names(behav.order)<- names(theta.estim)
@@ -566,7 +572,9 @@ for (i in 1:length(obs.list)) {
 #Check traceplot of log likelihood
 par(mfrow=c(2,2), ask = T)
 for (i in 1:length(res)) {
-  plot(res[[i]]$loglikel, type='l', main = paste("ID",names(obs.list)[i]))
+  plot(res[[i]]$loglikel, type='l', main = paste("ID",names(obs.list)[i]),
+       xlab = "Iteration", ylab = "Log Likelihood")
+  abline(v = ngibbs/2, col = "red", lwd = 1.5)
 }
 par(mfrow=c(1,1), ask=F)
 
@@ -598,7 +606,11 @@ par(mfrow=c(1,1), ask=F)
 
 #Determine proportion of behaviors (across all time segments)
 purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>% 
-  purrr::map(., ~sum(.[1:3]))
+  purrr::map(., ~sum(.[1:2]))  #for top 2 states
+purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>% 
+  purrr::map(., ~sum(.[1:3]))  #for top 3 states
+purrr::map(theta.estim, function(x) round(colSums(x)/nrow(x), digits = 3)) %>%
+  purrr::map(., ~sum(.[1:4]))  #for top 4 states
 
 
 ## Viz histograms from model
@@ -637,7 +649,7 @@ par(ask=F)
 behav.order<- list(c(1,3,2), c(1,2,3), c(3,1,2), c(2,1,3), c(3,2,1),
                    c(2,1,3), c(2,1,3), c(2,3,1), c(1,3,2), c(2,3,1),
                    c(2,1,3), c(2,1,3), c(1,2,3), c(1,3,2), c(2,1,3),
-                   c(2,1,3), c(2,1,3), c(2,1,3), c(3,1,2), c(2,3,1))
+                   c(2,1,3), c(1,2,3), c(2,1,3), c(2,3,1), c(3,1,2))
 
 
 names(behav.order)<- names(theta.estim)

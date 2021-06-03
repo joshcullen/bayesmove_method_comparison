@@ -116,7 +116,7 @@ plan(multisession, workers = 5)
 dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
 
-# track_length == 5000; takes 14 min for 40000 iterations
+# track_length == 5000; takes 13 min for 40000 iterations
 dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
                                 alpha = alpha)
 
@@ -124,7 +124,8 @@ dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins =
 dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
 
-# track_length == 50000; takes 138 min for 40000 iterations
+# track_length == 50000; takes 3.25 hrs for 60000 iterations
+ngibbs = 60000
 dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
 
@@ -133,7 +134,15 @@ plan(sequential)  #closes background workers
 
 
 ## If sims analyzed separately, merge all runs together in single list
-dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, dat.res_50k, SIMPLIFY=FALSE)
+dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, SIMPLIFY=FALSE)
+
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 20000))
+names(blank)<- paste0("Iter_", 40001:60000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_50k, SIMPLIFY = FALSE)
+
 
 ## Reclassify and restructure data as needed
 dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
@@ -154,7 +163,10 @@ traceplot(data = dat.res$LML, ngibbs = ngibbs, type = "LML")
 
 
 ##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
-MAP.est<- get_MAP(dat.res$LML, nburn = ngibbs/2)
+MAP.est<- get_MAP(dat.res$LML[1:15,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[16:20,], nburn = 60000/2)
+MAP.est<- c(MAP.est, MAP.est2)
+
 brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
 
 ## Visualize breakpoints over data streams
@@ -317,7 +329,8 @@ dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins =
 dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
 
-# track_length == 50000; takes 156 min for 40000 iterations
+# track_length == 50000; takes 3.8 hrs for 60000 iterations
+ngibbs = 60000
 dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
                                  alpha = alpha)
 
@@ -325,7 +338,14 @@ plan(sequential)  #closes background workers
 
 
 ## If sims analyzed separately, merge all runs together in single list
-dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, dat.res_50k, SIMPLIFY=FALSE)
+dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, SIMPLIFY=FALSE)
+
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 20000))
+names(blank)<- paste0("Iter_", 40001:60000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_50k, SIMPLIFY = FALSE)
 
 ## Reclassify and restructure data as needed
 dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
@@ -346,7 +366,10 @@ traceplot(data = dat.res$LML, ngibbs = ngibbs, type = "LML")
 
 
 ##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
-MAP.est<- get_MAP(dat.res$LML, nburn = ngibbs/2)
+MAP.est<- get_MAP(dat.res$LML[1:15,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[16:20,], nburn = 60000/2)
+MAP.est<- c(MAP.est, MAP.est2)
+
 brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
 
 ## Visualize breakpoints over data streams

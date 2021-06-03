@@ -811,8 +811,8 @@ behav.order_weird<- bayesmove::df_to_list(behav.order_weird, "id")
 behav.order_weird<- map(behav.order_weird, as.numeric)
 
 
-#calculate true proportions of SL and TA by behavior for all bins for ID 2_2 for Bayesian model
-bayes.b_weird<- behav.res_weird[[15]] %>% rename(., var = param)
+#calculate true proportions of SL and TA by behavior for all bins for ID 5_3 for Bayesian model
+bayes.b_weird<- behav.res_weird[[15]]
 bayes.b_weird$behav<- bayes.b_weird$behav %>% 
   as.character() %>% 
   str_replace_all(., "1", "Encamped") %>% 
@@ -853,8 +853,7 @@ p.distfit<- ggplot(true.b_weird, aes(x = bin, y = prop, fill = behav)) +
 #Bayesian
 bayes.rmse_weird<- list()
 for (i in 1:length(behav.res_weird)) {
-  bayes.b_weird<- behav.res_weird[[i]] %>% 
-    rename(., var = param)
+  bayes.b_weird<- behav.res_weird[[i]]
   
   behavs<- c("Encamped","ARS","Transit")
   
@@ -1021,13 +1020,13 @@ p.rmse_weird<- ggplot(rmse.df_weird, aes(track_length, rmse.value, fill = method
 
 ## Make composite
 library(gridExtra)
-png("Figure S1 (rmse from sim)_updated.png", width = 14.5, height = 5.5, units = "in", res = 330)
+# png("Figure S1 (rmse from sim)_updated.png", width = 14.5, height = 5.5, units = "in", res = 330)
 
 grid.arrange(p.distfit, p.rmse_weird, heights = c(0.2, 1),
              widths = c(1, 0.2, 1, 0.5),
              layout_matrix = rbind(c(NA, NA, NA, NA),
                                    c(3, NA, 4, 4)))
-dev.off()
+# dev.off()
 
 
 
