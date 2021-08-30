@@ -334,10 +334,13 @@ HMM.sim = function(nsim, nobs, SL.params, TA.params, Z0) {
   #behaviors params must be in order
   #for simulating w/ 3 behavioral states
   
+  if (nsim != length(nobs)) stop("'nobs' must be a vector of length 'nsim'")
   
   track.list<- list()  #store all tracks of all durations
   max.cnt<- table(nobs) %>% max()
-  sim.ID<- rep(1:max.cnt, nsim/max.cnt)  #running 5 different simulations per track length
+  n.type<- nsim/max.cnt
+  sim.ID<- rep(1:max.cnt, n.type)  #running 5 different simulations per track length
+  sim.ID2<- rep(1:n.type, each = max.cnt)
   
   for (j in 1:nsim) {
       
@@ -389,7 +392,7 @@ HMM.sim = function(nsim, nobs, SL.params, TA.params, Z0) {
       X <- c(Z0[1], Z0[1] + cumsum(dX))
       Y <- c(Z0[2], Z0[2] + cumsum(dY))
       
-      track<- data.frame(id = as.character(paste0(sim.ID[j],"_",nobs1)),
+      track<- data.frame(id = as.character(paste0(sim.ID[j],"_",sim.ID2[j])),
                          time1 = 1:(nobs1 + 1),
                          x = X,
                          y = Y,
@@ -403,6 +406,108 @@ HMM.sim = function(nsim, nobs, SL.params, TA.params, Z0) {
   
     names(track.list)<- track.list %>% modify_depth(1, ~unique(.$id)) %>% unlist()
     
+  
+  return(track.list)
+}
+
+#----------------------------------------------
+
+
+### HMM assuming CRW using uncommon distributions; modified from Leos-Barajas & Michelot (2018) arXiv pre-print (https://arxiv.org/pdf/1806.10639.pdf)
+
+HMM.sim2 = function(nsim, nobs, SL.params, TA.params, Z0) {  
+  #nsim=number of simulations
+  #nobs=number of observations per simulation (vector)
+  #SL.params=df of shape and rate params
+  #TA.params=df of mean TA and concen. param
+  #Z0=coords of initial location
+  
+  #uses truncated normal for step lengths and beta/uniform/truncated_normal for turning angles
+  #behaviors params must be in order
+  #for simulating w/ 3 behavioral states
+  
+  if (nsim != length(nobs)) stop("'nobs' must be a vector of length 'nsim'")
+  
+  track.list<- list()  #store all tracks of all durations
+  max.cnt<- table(nobs) %>% max()
+  n.type<- nsim/max.cnt
+  sim.ID<- rep(1:max.cnt, n.type)  #running 5 different simulations per track length
+  sim.ID2<- rep(1:n.type, each = max.cnt)
+  
+  for (j in 1:nsim) {
+    
+    # Number of states
+    N <- 3
+    # transition probabilities
+    Gamma <- matrix(c(0.9, 0.05, 0.05,
+                      0.05, 0.9, 0.05,
+                      0.05, 0.05, 0.9),
+                    nrow = 3, ncol = 3)
+    # initial distribution set to the stationary distribution 
+    delta <- solve(t(diag(N) - Gamma + 1), rep(1, N))
+    
+    
+    # state-dependent distribution params
+    nobs1 <- nobs[j]
+    S <- rep(NA, nobs1) 
+    y <- matrix(NA, nobs1, 2)  #2 cols; for step length and turning angle
+    
+    # initialize state and observation
+    S[1] <- sample(1:N, size=1, prob=delta)  #latent state
+    y[1,1] <- rtnorm(n = 1, lo = SL.params[S[1],1], hi = SL.params[S[1],2],
+                     mu = SL.params[S[1],3], sig = SL.params[S[1],4])  #SL
+    
+    if (S[1] == 1) {  #TA
+      y[1,2]<- rbeta(n = 1, shape1 = TA.params[1,1], shape2 = TA.params[1,2])*2*pi-pi  #Rest
+    } else if (S[1] == 2) {
+      y[1,2]<- runif(n = 1, min = TA.params[2,1], max = TA.params[2,2]) #Exploratory
+    } else {
+      y[1,2]<- rtnorm(n = 1, lo=-pi, hi=pi, mu=TA.params[3,1], sig=TA.params[3,2])  #Transit
+    }
+    
+    
+    
+    # simulate state and observation processes forward
+    for(t in 2:nobs1) {
+      S[t] <- sample(1:N, size=1, prob=Gamma[S[t-1],])  #latent state
+      y[t,1] <- rtnorm(n = 1, lo = SL.params[S[t],1], hi = SL.params[S[t],2],
+                       mu = SL.params[S[t],3], sig = SL.params[S[t],4])  #SL
+      
+      if (S[t] == 1) {  #TA
+        y[t,2]<- rbeta(n = 1, shape1 = TA.params[1,1], shape2 = TA.params[1,2])*2*pi-pi
+      } else if (S[t] == 2) {
+        y[t,2]<- runif(n = 1, min = TA.params[2,1], max = TA.params[2,2])
+      } else {
+        y[t,2]<- rtnorm(n = 1, lo=-pi, hi=pi, mu=TA.params[3,1], sig=TA.params[3,2])
+      }
+      
+    }
+    
+    # cumulative angle
+    Phi <- cumsum(y[,2])
+    
+    # step length components
+    dX <- y[,1]*cos(Phi)
+    dY <- y[,1]*sin(Phi)
+    
+    # actual X-Y values
+    X <- c(Z0[1], Z0[1] + cumsum(dX))
+    Y <- c(Z0[2], Z0[2] + cumsum(dY))
+    
+    track<- data.frame(id = as.character(paste0(sim.ID[j],"_",sim.ID2[j])),
+                       time1 = 1:(nobs1 + 1),
+                       x = X,
+                       y = Y,
+                       SL = c(NA, y[,1]),
+                       TA = c(NA, y[,2]),
+                       state = c(NA, S),
+                       track_length = nobs1)
+    
+    track.list[[j]]<- track
+  }
+  
+  names(track.list)<- track.list %>% modify_depth(1, ~unique(.$id)) %>% unlist()
+  
   
   return(track.list)
 }

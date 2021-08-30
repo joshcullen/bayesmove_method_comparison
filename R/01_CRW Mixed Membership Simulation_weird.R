@@ -254,7 +254,7 @@ TA.plot<- ggplot(data = true_plot_data_TA, aes(x = x, y = y)) +
            fontface = "italic") +
   annotate(geom = "rect", xmin = 0.2, xmax = 2.6, ymin = 0.47, ymax = 0.53, color = "#FDE725FF",
            fill = "#FDE725FF", alpha = 0.1) +
-  annotate(geom = "text", x = 1.4, y = 0.5, label = 'TN(7, 20, -\U03C0, \U03C0)',
+  annotate(geom = "text", x = 1.4, y = 0.5, label = 'TN(0, 1, -\U03C0, \U03C0)',
            fontface = "italic") +
   theme_bw() +
   theme(panel.grid = element_blank(),
