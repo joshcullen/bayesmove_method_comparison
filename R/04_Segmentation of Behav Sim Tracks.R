@@ -1,0 +1,804 @@
+################################
+#### Run Segmentation Model ####
+################################
+
+set.seed(1)
+
+library(bayesmove)
+library(tidyverse)
+library(tictoc)
+library(future)
+library(viridis)
+library(lubridate)
+library(ggforce)
+library(progressr)
+
+source('R/helper functions.R')
+
+
+######################################################
+### Analyze simulations with unusual distributions ###
+######################################################
+
+#load and manipulate data
+dat<- read.csv("data/CRW_MM_sim_weird.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_weird.csv", as.is = T)
+dat$dt<- 3600  #set time step
+names(dat)[4:5]<- c("dist","rel.angle")  #change names for step length and turning angle
+dat.list<- df_to_list(dat=dat, ind = "id")
+
+#filter data for tstep of interest
+behav.list<- filter_time(dat.list = dat.list, int = 3600)  #add move params and filter by 3600 s interval
+
+#define bin number and limits for turning angles
+angle.bin.lims=seq(from=-pi, to=pi, by=pi/4)  #8 bins
+
+#define bin number and limits for step lengths
+dist.bin.lims=quantile(dat[dat$dt == 3600,]$dist,
+                       c(0,0.25,0.50,0.75,0.90,1), na.rm=T)  #5 bins
+
+
+#Viz limits on continuous vars
+behav.df<- map_dfr(behav.list, `[`)
+
+ggplot(behav.df, aes(x=dist)) +
+  geom_density(fill = "lightblue") +
+  geom_vline(xintercept = dist.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nStep Length", y = "Density\n")
+
+ggplot(behav.df, aes(x=rel.angle)) +
+  geom_density(fill = "indianred") +
+  geom_vline(xintercept = angle.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nTurning Angle (rad)", y = "Density\n")
+
+
+
+#assign bins to obs
+behav.list<- map(behav.list, discrete_move_var, lims = list(dist.bin.lims, angle.bin.lims),
+                 varIn = c("dist", "rel.angle"), varOut = c("SL", "TA"))
+behav.list2<- lapply(behav.list, function(x) subset(x, select = c(id, SL, TA)))  #retain id and parameters on which to segment
+
+
+
+#Viz discretization of params
+behav.df2<- map_dfr(behav.list2, `[`)
+behav.df2<- behav.df2 %>% 
+  gather(key, value, -id)
+
+param.prop<- behav.df2 %>%
+  group_by(key, value) %>%
+  summarise(n=n()) %>%
+  mutate(prop=n/nrow(behav.df)) %>%
+  ungroup()  #if don't ungroup after grouping, ggforce won't work
+
+param.prop<- param.prop[-c(6,15),]
+param.prop[1:5, "value"]<- ((diff(dist.bin.lims)/2) + dist.bin.lims[1:5])
+param.prop[6:13, "value"]<- (diff(angle.bin.lims)/2) + angle.bin.lims[1:8]
+
+
+ggplot(data = param.prop %>% filter(key == "SL"), aes(value, prop)) +
+  geom_bar(stat = "identity", width = (diff(dist.bin.lims)-0.025),
+           fill = "lightblue", color = "black") +
+  facet_zoom(xlim = c(0,5)) +
+  labs(x = "Step Length", y = "Proportion") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+ggplot(data = param.prop %>% filter(key == "TA"), aes(value, prop)) +
+  geom_bar(stat = "identity", fill = "indianred", color = "black") +
+  labs(x = "Turning Angle (radians)", y = "Proportion") +
+  theme_bw() +
+  scale_x_continuous(breaks = c(-pi, -pi/2, 0, pi/2, pi),
+                     labels = expression(-pi, -pi/2, 0, pi/2, pi)) +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+
+## Run RJMCMC
+
+#prior
+alpha = 1
+
+ngibbs = 40000
+
+plan(multisession, workers = 5)
+
+# track_length == 1000; takes 22 sec for 40000 iterations
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+                                alpha = alpha)
+
+# track_length == 5000; takes 53 sec for 40000 iterations
+dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
+                                alpha = alpha)
+
+# track_length == 10000; takes 1.5 min for 40000 iterations
+dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
+                                 alpha = alpha)
+
+# track_length == 50000; takes 11 min for 60000 iterations
+ngibbs = 60000
+dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
+                                 alpha = alpha)
+
+
+plan(sequential)  #closes background workers
+
+
+## If sims analyzed separately, merge all runs together in single list
+dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, SIMPLIFY=FALSE)
+
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 20000))
+names(blank)<- paste0("Iter_", 40001:60000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_50k, SIMPLIFY = FALSE)
+
+
+## Reclassify and restructure data as needed
+# dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
+#                       function(x) as.numeric(as.character(x)))
+# dat.res$LML[,2:ncol(dat.res$LML)]<- apply(dat.res$LML[,2:ncol(dat.res$LML)], 2,
+#                     function(x) as.numeric(as.character(x)))
+dat.res$brkpts<- dat.res$brkpts %>% 
+  split(., row(.)) %>% 
+  flatten()  #deals with dimensional list
+names(dat.res$brkpts)<- dat.res$nbrks[,1]
+
+
+## Traceplots
+#type is either 'nbrks' or 'LML' for y-axis label
+traceplot(data = dat.res, type = "nbrks")
+traceplot(data = dat.res, type = "LML")
+
+
+
+##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
+MAP.est<- get_MAP(dat.res$LML[1:15,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[16:20,], nburn = 60000/2)
+MAP.est<- c(MAP.est, MAP.est2)
+
+brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
+
+## Visualize breakpoints over data streams
+plot_breakpoints(data = behav.list, as_date = FALSE, var_names = c("dist","rel.angle"),
+                 var_labels = c("Step Length","Turning Angle"), brkpts = brkpts)
+
+
+
+# Compare True vs Modeled Breakpoints
+all.brkpts<- list()
+for (i in 1:nrow(brkpts)) {
+all.brkpts[[i]]<- brkpt.accuracy(model.brkpts = brkpts[i,-1], true.brkpts = true.brkpts[i,-1],
+                            acc.tol = 10, dup.tol = 1, miss.tol = 30)
+}
+
+
+
+#Compare elapsed time
+time<- dat.res$elapsed.time
+time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>% 
+  factor(., levels = c('1k','5k','10k','50k'))
+time$time<- time$time %>% 
+  as.character() %>% 
+  str_remove_all(" mins") %>%
+  as.numeric()
+
+
+
+#assign time seg and make as DF
+dat_out<- assign_tseg(dat = behav.list, brkpts = brkpts)
+
+#export breakpoints for easier reference and elapsed time for method comparison
+names(all.brkpts)<- names(dat.list)
+all.brkpts<- bind_rows(all.brkpts, .id = 'id')
+
+
+#export results for hard-clustering and mixed-membership simulations
+# write.csv(dat_out, "data/CRW_MM_tsegs_weird.csv", row.names = F)
+# write.csv(all.brkpts, "data/Bayesian_allbreakpts_weird.csv", row.names = F)
+# write.csv(time, "data/Bayesian_elapsed_time_weird.csv", row.names = F)  #units = min
+
+
+
+
+
+
+
+
+
+
+
+
+#########################################################
+### Analyze simulations with parametric distributions ###
+#########################################################
+
+set.seed(1)
+
+#load and manipulate data
+dat<- read.csv("data/CRW_MM_sim_parametric.csv", as.is = T)
+true.brkpts<- read.csv("data/CRW_MM_sim_brkpts_parametric.csv", as.is = T)
+dat$dt<- 3600  #set time step
+names(dat)[4:5]<- c("dist","rel.angle")  #change names for step length and turning angle
+dat.list<- df_to_list(dat=dat, ind = "id")
+
+#filter data for tstep of interest
+behav.list<- filter_time(dat.list = dat.list, int = 3600)  #add move params and filter by 3600 s interval
+
+#define bin number and limits for turning angles
+angle.bin.lims=seq(from=-pi, to=pi, by=pi/4)  #8 bins
+
+#define bin number and limits for step lengths
+dist.bin.lims=quantile(dat[dat$dt == 3600,]$dist,
+                       c(0,0.25,0.50,0.75,0.90,1), na.rm=T)  #5 bins
+
+
+#Viz limits on continuous vars
+behav.df<- map_dfr(behav.list, `[`)
+
+ggplot(behav.df, aes(x=dist)) +
+  geom_density(fill = "lightblue") +
+  geom_vline(xintercept = dist.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nStep Length", y = "Density\n")
+
+ggplot(behav.df, aes(x=rel.angle)) +
+  geom_density(fill = "indianred") +
+  geom_vline(xintercept = angle.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nTurning Angle (rad)", y = "Density\n")
+
+
+
+#assign bins to obs
+behav.list<- map(behav.list, discrete_move_var, lims = list(dist.bin.lims, angle.bin.lims),
+                 varIn = c("dist", "rel.angle"), varOut = c("SL", "TA"))
+behav.list2<- lapply(behav.list, function(x) subset(x, select = c(id, SL, TA)))  #retain id and parameters on which to segment
+
+
+
+#Viz discretization of params
+behav.df2<- map_dfr(behav.list2, `[`)
+behav.df2<- behav.df2 %>% 
+  gather(key, value, -id)
+
+param.prop<- behav.df2 %>%
+  group_by(key, value) %>%
+  summarise(n=n()) %>%
+  mutate(prop=n/nrow(behav.df)) %>%
+  ungroup()  #if don't ungroup after grouping, ggforce won't work
+
+param.prop<- param.prop[-c(6,15),]
+param.prop[1:5, "value"]<- ((diff(dist.bin.lims)/2) + dist.bin.lims[1:5])
+param.prop[6:13, "value"]<- (diff(angle.bin.lims)/2) + angle.bin.lims[1:8]
+
+
+ggplot(data = param.prop %>% filter(key == "SL"), aes(value, prop)) +
+  geom_bar(stat = "identity", width = (diff(dist.bin.lims)-0.025),
+           fill = "lightblue", color = "black") +
+  facet_zoom(xlim = c(0,5)) +
+  labs(x = "Step Length", y = "Proportion") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+ggplot(data = param.prop %>% filter(key == "TA"), aes(value, prop)) +
+  geom_bar(stat = "identity", fill = "indianred", color = "black") +
+  labs(x = "Turning Angle (radians)", y = "Proportion") +
+  theme_bw() +
+  scale_x_continuous(breaks = c(-pi, -pi/2, 0, pi/2, pi),
+                     labels = expression(-pi, -pi/2, 0, pi/2, pi)) +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+
+## Run RJMCMC
+
+#prior
+alpha = 1
+
+ngibbs = 40000
+
+plan(multisession, workers = 5)
+
+# track_length == 1000; takes 20 sec for 40000 iterations
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+                                alpha = alpha)
+
+# track_length == 5000; takes 51 sec for 40000 iterations
+dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
+                                alpha = alpha)
+
+# track_length == 10000; takes 1.7 min for 40000 iterations
+dat.res_10k<- segment_behavior(data = behav.list2[11:15], ngibbs = ngibbs, nbins = c(5,8),
+                                 alpha = alpha)
+
+# track_length == 50000; takes 11 min for 60000 iterations
+ngibbs = 60000
+dat.res_50k<- segment_behavior(data = behav.list2[16:20], ngibbs = ngibbs, nbins = c(5,8),
+                                 alpha = alpha)
+
+plan(sequential)  #closes background workers
+
+
+## If sims analyzed separately, merge all runs together in single list
+dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, dat.res_10k, SIMPLIFY=FALSE)
+
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 20000))
+names(blank)<- paste0("Iter_", 40001:60000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_50k, SIMPLIFY = FALSE)
+
+## Reclassify and restructure data as needed
+# dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
+#                                               function(x) as.numeric(as.character(x)))
+# dat.res$LML[,2:ncol(dat.res$LML)]<- apply(dat.res$LML[,2:ncol(dat.res$LML)], 2,
+#                                           function(x) as.numeric(as.character(x)))
+dat.res$brkpts<- dat.res$brkpts %>% 
+  split(., row(.)) %>% 
+  flatten()  #deals with dimensional list
+names(dat.res$brkpts)<- dat.res$nbrks[,1]
+
+
+## Traceplots
+#type is either 'nbrks' or 'LML' for y-axis label
+traceplot(data = dat.res, type = "nbrks")
+traceplot(data = dat.res, type = "LML")
+
+
+
+##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
+MAP.est<- get_MAP(dat.res$LML[1:15,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[16:20,], nburn = 60000/2)
+MAP.est<- c(MAP.est, MAP.est2)
+
+brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
+
+## Visualize breakpoints over data streams
+plot_breakpoints(data = behav.list, as_date = FALSE, var_names = c("dist","rel.angle"),
+                 var_labels = c("Step Length","Turning Angle"), brkpts = brkpts)
+
+
+
+# Compare True vs Modeled Breakpoints
+all.brkpts<- list()
+for (i in 1:nrow(brkpts)) {
+  all.brkpts[[i]]<- brkpt.accuracy(model.brkpts = brkpts[i,-1], true.brkpts = true.brkpts[i,-1],
+                                   acc.tol = 10, dup.tol = 1, miss.tol = 30)
+}
+
+
+
+#Compare elapsed time
+time<- dat.res$elapsed.time
+time$track_length<- rep(c('1k','5k','10k','50k'), each = 5) %>% 
+  factor(., levels = c('1k','5k','10k','50k'))
+time$time<- time$time %>% 
+  as.character() %>% 
+  str_remove_all(" mins") %>%
+  as.numeric()
+
+
+
+#assign time seg and make as DF
+dat_out<- assign_tseg(dat = behav.list, brkpts = brkpts)
+
+#export breakpoints for easier reference and elapsed time for method comparison
+names(all.brkpts)<- names(dat.list)
+all.brkpts<- bind_rows(all.brkpts, .id = 'id')
+
+
+#export results for hard-clustering and mixed-membership simulations
+# write.csv(dat_out, "data/CRW_MM_tsegs_parametric.csv", row.names = F)
+# write.csv(all.brkpts, "data/Bayesian_allbreakpts_parametric.csv", row.names = F)
+# write.csv(time, "data/Bayesian_elapsed_time_parametric.csv", row.names = F)  #units = min
+
+
+
+
+
+
+
+
+
+
+#########################################################
+### Analyze HMM simulations with common distributions ###
+#########################################################
+
+set.seed(1)
+
+#load and manipulate data
+dat<- read.csv("data/HMM_sim.csv", as.is = T)
+
+dat$dt<- 3600  #set time step
+names(dat)[5:6]<- c("dist","rel.angle")  #change names for step length and turning angle
+dat.list<- df_to_list(dat=dat, ind = "id")
+
+#filter data for tstep of interest
+behav.list<- filter_time(dat.list = dat.list, int = 3600)  #add move params and filter by 3600 s interval
+
+#define bin number and limits for turning angles
+angle.bin.lims=seq(from=-pi, to=pi, by=pi/4)  #8 bins
+
+#define bin number and limits for step lengths
+dist.bin.lims=quantile(dat[dat$dt == 3600,]$dist,
+                       c(0,0.25,0.50,0.75,0.90,1), na.rm=T)  #5 bins
+
+
+#Viz limits on continuous vars
+behav.df<- map_dfr(behav.list, `[`)
+
+ggplot(behav.df, aes(x=dist)) +
+  geom_density(fill = "lightblue") +
+  geom_vline(xintercept = dist.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nStep Length", y = "Density\n")
+
+ggplot(behav.df, aes(x=rel.angle)) +
+  geom_density(fill = "indianred") +
+  geom_vline(xintercept = angle.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nTurning Angle (rad)", y = "Density\n")
+
+
+
+#assign bins to obs
+behav.list<- map(behav.list, discrete_move_var, lims = list(dist.bin.lims, angle.bin.lims),
+                 varIn = c("dist", "rel.angle"), varOut = c("SL", "TA"))
+behav.list2<- lapply(behav.list, function(x) subset(x, select = c(id, SL, TA)))  #retain id and parameters on which to segment
+
+
+
+#Viz discretization of params
+behav.df2<- map_dfr(behav.list2, `[`)
+behav.df2<- behav.df2 %>% 
+  gather(key, value, -id)
+
+param.prop<- behav.df2 %>%
+  group_by(key, value) %>%
+  summarise(n=n()) %>%
+  mutate(prop=n/nrow(behav.df)) %>%
+  ungroup()  #if don't ungroup after grouping, ggforce won't work
+
+param.prop<- param.prop[-c(6,15),]
+param.prop[1:5, "value"]<- ((diff(dist.bin.lims)/2) + dist.bin.lims[1:5])
+param.prop[6:13, "value"]<- (diff(angle.bin.lims)/2) + angle.bin.lims[1:8]
+
+
+ggplot(data = param.prop %>% filter(key == "SL"), aes(value, prop)) +
+  geom_bar(stat = "identity", width = (diff(dist.bin.lims)-0.025),
+           fill = "lightblue", color = "black") +
+  facet_zoom(xlim = c(0,8)) +
+  labs(x = "Step Length", y = "Proportion") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+ggplot(data = param.prop %>% filter(key == "TA"), aes(value, prop)) +
+  geom_bar(stat = "identity", fill = "indianred", color = "black") +
+  labs(x = "Turning Angle (radians)", y = "Proportion") +
+  theme_bw() +
+  scale_x_continuous(breaks = c(-pi, -pi/2, 0, pi/2, pi),
+                     labels = expression(-pi, -pi/2, 0, pi/2, pi)) +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+
+## Run RJMCMC
+
+#prior
+alpha = 1
+
+ngibbs = 40000
+
+plan(multisession, workers = 5)
+
+# track_length == 1000; takes 28 sec for 40000 iterations
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+                              alpha = alpha)
+
+set.seed(1)
+ngibbs = 160000
+# track_length == 5000; takes 7.5 min for 160000 iterations
+dat.res_5k<- segment_behavior(data = behav.list2[6:10], ngibbs = ngibbs, nbins = c(5,8),
+                              alpha = alpha)
+
+
+plan(sequential)  #closes background workers
+
+
+## If sims analyzed separately, merge all runs together in single list
+# dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, SIMPLIFY=FALSE)
+dat.res<- dat.res_1k
+
+# Add in results that used different number of iterations
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 120000))
+names(blank)<- paste0("Iter_", 40001:160000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_5k, SIMPLIFY = FALSE)
+
+## Reclassify and restructure data as needed
+# dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
+#                                               function(x) as.numeric(as.character(x)))
+# dat.res$LML[,2:ncol(dat.res$LML)]<- apply(dat.res$LML[,2:ncol(dat.res$LML)], 2,
+#                                           function(x) as.numeric(as.character(x)))
+dat.res$brkpts<- dat.res$brkpts %>% 
+  split(., row(.)) %>% 
+  flatten()  #deals with dimensional list
+names(dat.res$brkpts)<- dat.res$nbrks[,1]
+
+
+## Traceplots
+#type is either 'nbrks' or 'LML' for y-axis label
+traceplot(data = dat.res, type = "nbrks")
+traceplot(data = dat.res, type = "LML")
+
+
+
+##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
+MAP.est<- get_MAP(dat.res$LML[1:5,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[6:10,], nburn = 160000/2)
+MAP.est<- c(MAP.est, MAP.est2)
+
+brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
+
+## Visualize breakpoints over data streams
+plot_breakpoints(data = behav.list, as_date = FALSE, var_names = c("dist","rel.angle"),
+                 var_labels = c("Step Length","Turning Angle"), brkpts = brkpts)
+
+
+
+#Compare elapsed time
+time<- dat.res$elapsed.time
+time$track_length<- rep(c('1k','5k'), each = 5) %>% 
+  factor(., levels = c('1k','5k'))
+time$time<- time$time %>% 
+  as.character() %>% 
+  str_remove_all(" mins") %>%
+  as.numeric()
+
+
+
+#assign time seg and make as DF
+dat_out<- assign_tseg(dat = behav.list, brkpts = brkpts)
+
+
+
+#export results HMM simulations w/ common distributions
+# write.csv(dat_out, "data/HMM_tsegs_parametric.csv", row.names = F)
+# write.csv(time, "data/Bayesian(HMM)_elapsed_time_parametric.csv", row.names = F)  #units = min
+
+
+
+
+
+
+
+
+
+
+###########################################################
+### Analyze HMM simulations with uncommon distributions ###
+###########################################################
+
+set.seed(2021)
+
+#load and manipulate data
+dat<- read.csv("data/HMM_sim_weird.csv", as.is = T)
+
+dat$dt<- 3600  #set time step
+names(dat)[5:6]<- c("dist","rel.angle")  #change names for step length and turning angle
+dat.list<- df_to_list(dat=dat, ind = "id")
+
+#filter data for tstep of interest
+behav.list<- filter_time(dat.list = dat.list, int = 3600)  #add move params and filter by 3600 s interval
+
+#define bin number and limits for turning angles
+angle.bin.lims=seq(from=-pi, to=pi, by=pi/4)  #8 bins
+
+#define bin number and limits for step lengths
+dist.bin.lims=quantile(dat[dat$dt == 3600,]$dist,
+                       c(0,0.25,0.50,0.75,0.90,1), na.rm=T)  #5 bins
+
+
+#Viz limits on continuous vars
+behav.df<- map_dfr(behav.list, `[`)
+
+ggplot(behav.df, aes(x=dist)) +
+  geom_density(fill = "lightblue") +
+  geom_vline(xintercept = dist.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nStep Length", y = "Density\n")
+
+ggplot(behav.df, aes(x=rel.angle)) +
+  geom_density(fill = "indianred") +
+  geom_vline(xintercept = angle.bin.lims, linetype = "dashed") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12)) +
+  labs(x = "\nTurning Angle (rad)", y = "Density\n")
+
+
+
+#assign bins to obs
+behav.list<- map(behav.list, discrete_move_var, lims = list(dist.bin.lims, angle.bin.lims),
+                 varIn = c("dist", "rel.angle"), varOut = c("SL", "TA"))
+behav.list2<- lapply(behav.list, function(x) subset(x, select = c(id, SL, TA)))  #retain id and parameters on which to segment
+
+
+
+#Viz discretization of params
+behav.df2<- map_dfr(behav.list2, `[`)
+behav.df2<- behav.df2 %>% 
+  gather(key, value, -id)
+
+param.prop<- behav.df2 %>%
+  group_by(key, value) %>%
+  summarise(n=n()) %>%
+  mutate(prop=n/nrow(behav.df)) %>%
+  ungroup()  #if don't ungroup after grouping, ggforce won't work
+
+param.prop<- param.prop[-c(6,15),]
+param.prop[1:5, "value"]<- ((diff(dist.bin.lims)/2) + dist.bin.lims[1:5])
+param.prop[6:13, "value"]<- (diff(angle.bin.lims)/2) + angle.bin.lims[1:8]
+
+
+ggplot(data = param.prop %>% filter(key == "SL"), aes(value, prop)) +
+  geom_bar(stat = "identity", width = (diff(dist.bin.lims)-0.025),
+           fill = "lightblue", color = "black") +
+  facet_zoom(xlim = c(0,8)) +
+  labs(x = "Step Length", y = "Proportion") +
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+ggplot(data = param.prop %>% filter(key == "TA"), aes(value, prop)) +
+  geom_bar(stat = "identity", fill = "indianred", color = "black") +
+  labs(x = "Turning Angle (radians)", y = "Proportion") +
+  theme_bw() +
+  scale_x_continuous(breaks = c(-pi, -pi/2, 0, pi/2, pi),
+                     labels = expression(-pi, -pi/2, 0, pi/2, pi)) +
+  theme(panel.grid = element_blank(), axis.title = element_text(size = 16),
+        axis.text = element_text(size = 12))
+
+
+
+## Run RJMCMC
+
+#prior
+alpha = 1
+
+ngibbs = 40000
+
+plan(multisession, workers = 5)
+
+# track_length == 1000; takes 30 sec for 40000 iterations
+dat.res_1k<- segment_behavior(data = behav.list2[1:5], ngibbs = ngibbs, nbins = c(5,8),
+                              alpha = alpha)
+
+set.seed(2022)
+ngibbs = 200000
+# track_length == 5000; takes 7 min for 200000 iterations
+dat.res_5k_1<- segment_behavior(data = behav.list2[6:9], ngibbs = ngibbs, nbins = c(5,8),
+                              alpha = alpha)
+
+
+#need to run track simulation '5_2' separately w/ different random seed to achieve similar number of breakpoints as other tracks of 5000 observations
+set.seed(2)
+ngibbs = 500000
+# track_length == 5000; takes 13 min for 500000 iterations
+dat.res_5k_2<- segment_behavior(data = behav.list2[10], ngibbs = ngibbs, nbins = c(5,8),
+                              alpha = alpha)
+
+plan(sequential)  #closes background workers
+
+
+## Merge dat.res_5k results together
+
+# Add in results that used different number of iterations
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res_5k_1$nbrks), ncol = 300000))
+names(blank)<- paste0("Iter_", 200001:500000)
+dat.res_5k_1$nbrks<- cbind(dat.res_5k_1$nbrks, blank)
+dat.res_5k_1$LML<- cbind(dat.res_5k_1$LML, blank)
+
+dat.res_5k<- map(names(dat.res_5k_1)[2:4], ~rbind(dat.res_5k_1[[.x]], dat.res_5k_2[[.x]]))
+dat.res_5k_brkpts = list(brkpts = c(dat.res_5k_1[[1]], dat.res_5k_2[[1]]))
+dat.res_5k = c(dat.res_5k_brkpts, dat.res_5k)
+dat.res_5k = set_names(dat.res_5k, names(dat.res_5k_1))
+
+
+## If sims analyzed separately, merge all runs together in single list
+# dat.res<- mapply(rbind, dat.res_1k, dat.res_5k, SIMPLIFY=FALSE)
+dat.res<- dat.res_1k
+
+# Add in results that used different number of iterations
+blank<- data.frame(matrix(NA, nrow = nrow(dat.res$nbrks), ncol = 460000))
+names(blank)<- paste0("Iter_", 40001:500000)
+
+dat.res$nbrks<- cbind(dat.res$nbrks, blank)
+dat.res$LML<- cbind(dat.res$LML, blank)
+dat.res<- mapply(rbind, dat.res, dat.res_5k, SIMPLIFY = FALSE)
+
+## Reclassify and restructure data as needed
+# dat.res$nbrks[,2:ncol(dat.res$nbrks)]<- apply(dat.res$nbrks[,2:ncol(dat.res$nbrks)], 2,
+#                                               function(x) as.numeric(as.character(x)))
+# dat.res$LML[,2:ncol(dat.res$LML)]<- apply(dat.res$LML[,2:ncol(dat.res$LML)], 2,
+#                                           function(x) as.numeric(as.character(x)))
+dat.res$brkpts<- dat.res$brkpts %>% 
+  split(., row(.)) %>% 
+  flatten()  #deals with dimensional list
+names(dat.res$brkpts)<- dat.res$nbrks[,1]
+
+
+## Traceplots
+#type is either 'nbrks' or 'LML' for y-axis label
+traceplot(data = dat.res, type = "nbrks")
+traceplot(data = dat.res, type = "LML")
+
+
+
+##Determine maximum a posteriori (MAP) estimate for selecting breakpoints
+MAP.est<- get_MAP(dat.res$LML[1:5,], nburn = 40000/2)
+MAP.est2<- get_MAP(dat.res$LML[6:9,], nburn = 200000/2)
+MAP.est3<- get_MAP(dat.res$LML[10,], nburn = 500000/2)
+MAP.est<- c(MAP.est, MAP.est2, MAP.est3)
+
+brkpts<- get_breakpts(dat = dat.res$brkpts, MAP.est = MAP.est)
+
+
+
+## Visualize breakpoints over data streams
+plot_breakpoints(data = behav.list, as_date = FALSE, var_names = c("dist","rel.angle"),
+                 var_labels = c("Step Length","Turning Angle"), brkpts = brkpts)
+
+
+
+#Compare elapsed time
+time<- dat.res$elapsed.time
+time$track_length<- rep(c('1k','5k'), each = 5) %>%
+  factor(., levels = c('1k','5k'))
+time$time<- time$time %>%
+  as.character() %>%
+  str_remove_all(" mins") %>%
+  as.numeric()
+
+
+
+#assign time seg and make as DF
+dat_out<- assign_tseg(dat = behav.list, brkpts = brkpts)
+
+
+
+#export results HMM simulations w/ uncommon distributions
+# write.csv(dat_out, "data/HMM_tsegs_weird.csv", row.names = F)
+# write.csv(time, "data/Bayesian(HMM)_elapsed_time_weird.csv", row.names = F)  #units = min
